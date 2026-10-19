@@ -130,6 +130,9 @@ class AppDatabase extends _$AppDatabase {
           .watchSingleOrNull()
           .map((r) => r == null ? null : Building.fromJson(r.toJson()));
 
+  Stream<List<PhotoRow>> watchPhotos(String entranceId) =>
+      (select(photos)..where((p) => p.entranceId.equals(entranceId))).watch();
+
   // ---- Writes ----
 
   /// The survey goes to SQLite: it survives a restart and waits for week 4's push.

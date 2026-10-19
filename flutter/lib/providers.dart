@@ -29,3 +29,7 @@ final entranceProvider = StreamProvider.family<Entrance?, String>(
 final buildingProvider = StreamProvider.family<Building?, String>(
   (ref, id) => ref.watch(databaseProvider).watchBuilding(id),
 );
+
+final photosProvider = StreamProvider.family<List<PhotoRow>, String>(
+  (ref, entranceId) => ref.watch(databaseProvider).watchPhotos(entranceId),
+);
