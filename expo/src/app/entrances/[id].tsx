@@ -1,9 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { Entrance } from '../../contract/contract';
 import { HereCard } from '../../components/HereCard';
 import { Photos } from '../../components/Photos';
 import { StatusChip } from '../../components/StatusChip';
-import { useBuilding, useEntrance } from '../../store';
+import { useEffect } from 'react';
+import { markOpened, useBuilding, useEntrance, useField } from '../../store';
+import { fromWire, toWire } from '../../wire';
 import { useColors } from '../../theme';
 
 const show = (v: number | boolean | string | null) =>
@@ -14,6 +17,11 @@ export default function EntranceScreen() {
   const entrance = useEntrance(id);
   // From SQLite, not the fixtures: a building made on the phone is there too.
   const building = useBuilding(entrance?.buildingId ?? '');
+  // Exercises 1 and 5: remember the visit, in SQLite and in the store.
+  useEffect(() => {
+    markOpened(id);
+    useField.getState().openRecent(id);
+  }, [id]);
   const colors = useColors();
   if (entrance === undefined) return null; // SQLite has not answered yet
   if (!entrance) {
@@ -73,6 +81,10 @@ export default function EntranceScreen() {
         <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Survey</Text>
       </Pressable>
       <HereCard />
+      <Text style={{ color: colors.muted }}>
+        Opened on this phone: {entrance.openedAt ? new Date(entrance.openedAt).toLocaleString() : 'never'}
+      </Text>
+      <WireJson entrance={entrance} color={colors.muted} />
       <Photos entranceId={entrance.id} />
     </ScrollView>
   );
@@ -93,3 +105,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+/** Exercise 2: the entrance as it would travel, and the proof that it comes back the same. */
+function WireJson({ entrance, color }: { entrance: Entrance; color: string }) {
+  const json = toWire(entrance);
+  const same = toWire(fromWire(json)) === json;
+  return (
+    <Text style={{ color, fontFamily: 'monospace', fontSize: 11 }}>
+      {same ? 'Round trip: same JSON ✓' : 'Round trip: DIFFERENT ✗'} · {json.length} characters, {Object.keys(JSON.parse(json)).length} keys
+    </Text>
+  );
+}
