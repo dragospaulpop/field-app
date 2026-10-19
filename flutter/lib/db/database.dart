@@ -135,6 +135,37 @@ class AppDatabase extends _$AppDatabase {
 
   // ---- Writes ----
 
+  /// A building the office missed: the worker stands at its door and makes
+  /// both rows on the phone, with ids born here (UUID v4). The office learns of
+  /// it at the first sync (week 4); until then it is 'pending', like any new row.
+  Future<String> addMissedEntrance(double lat, double lng, String buildingId, String entranceId) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    await transaction(() async {
+      await into(buildings).insert(BuildingsCompanion.insert(
+        id: buildingId,
+        createdAt: now,
+        updatedAt: now,
+        label: 'New building',
+        comment: const Value('Added in the field: not on the office map.'),
+      ));
+      await into(entrances).insert(EntrancesCompanion.insert(
+        id: entranceId,
+        createdAt: now,
+        updatedAt: now,
+        buildingId: buildingId,
+        lat: lat,
+        lng: lng,
+        street: '?', // the survey asks for the real address
+        number: '?',
+        entranceName: 'Sc. 1',
+        coordsConfirmed: true, // the pin is where the worker stands: at the door
+        addressConfirmed: false,
+        surveyStatus: SurveyStatus.in_progress,
+      ));
+    });
+    return entranceId;
+  }
+
   /// The survey goes to SQLite: it survives a restart and waits for week 4's push.
   Future<void> submitSurvey(Entrance surveyed, String me) {
     final now = DateTime.now().toUtc().toIso8601String();

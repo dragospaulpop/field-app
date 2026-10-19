@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:uuid/uuid.dart';
 
 import '../contract/contract.dart';
+import '../location.dart';
 import '../providers.dart';
 import 'status_chip.dart';
 
@@ -72,7 +75,27 @@ class MapScreen extends ConsumerWidget {
             ),
           ),
         ),
+        Positioned(
+          right: 16,
+          bottom: 24,
+          child: FloatingActionButton.extended(
+            tooltip: 'Add a building that is not on the map, here',
+            onPressed: () => _addMissed(context, ref),
+            icon: const Icon(Icons.add_location_alt),
+            label: const Text('Missed building'),
+          ),
+        ),
       ],
     );
+  }
+
+  /// The office's map is missing a building: pin it where you stand, then survey it.
+  Future<void> _addMissed(BuildContext context, WidgetRef ref) async {
+    final fix = await locate(context, ref);
+    if (fix == null) return;
+    final id = await ref.read(databaseProvider).addMissedEntrance(
+          fix.lat, fix.lng, const Uuid().v4(), const Uuid().v4());
+    await HapticFeedback.mediumImpact();
+    if (context.mounted) context.push('/entrances/$id/survey');
   }
 }
