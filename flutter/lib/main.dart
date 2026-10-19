@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'screens/building_screen.dart';
 import 'screens/entrance_screen.dart';
 import 'screens/inbox_screen.dart';
 import 'screens/map_screen.dart';
@@ -43,6 +44,10 @@ final _router = GoRouter(
       ],
     ),
     // Outside the shell: these cover the tab bar, like a stack screen.
+    GoRoute(
+      path: '/buildings/:id',
+      builder: (context, state) => BuildingScreen(id: state.pathParameters['id']!),
+    ),
     GoRoute(
       path: '/entrances/:id',
       builder: (context, state) =>

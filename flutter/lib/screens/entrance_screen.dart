@@ -36,7 +36,14 @@ class EntranceScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           Text('${e.street} ${e.number}', style: text.headlineSmall),
-          Text('${e.entranceName} · ${building.label}'),
+          Text(e.entranceName),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => context.push('/buildings/${e.buildingId}'),
+              child: Text('${building.label} · every entrance ›'),
+            ),
+          ),
           const SizedBox(height: 8),
           Align(alignment: Alignment.centerLeft, child: StatusChip(status: e.surveyStatus)),
           const SizedBox(height: 8),
