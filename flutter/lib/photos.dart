@@ -77,3 +77,22 @@ Future<ExifSummary?> takePhoto(BuildContext context, WidgetRef ref, String entra
   return _save(ref, entranceId, picked,
       where: fix, heading: fix == null ? null : ref.read(headingProvider).value, takenAt: takenAt);
 }
+
+/// EXIF's "2026:10:20 18:41:07" is the camera's local time: read it as this phone's.
+String? _exifTime(String? shotAt) {
+  final m = RegExp(r'^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})').firstMatch(shotAt ?? '');
+  if (m == null) return null;
+  final n = [for (var i = 1; i <= 6; i++) int.parse(m.group(i)!)];
+  return DateTime(n[0], n[1], n[2], n[3], n[4], n[5]).toUtc().toIso8601String();
+}
+
+/// The gallery: Android's photo picker needs no permission (the user picks,
+/// the app sees only that file). Where and which way it was taken we do not
+/// know — the phone was somewhere else then — so lat, lng and heading stay null.
+Future<ExifSummary?> pickPhoto(WidgetRef ref, String entranceId) async {
+  final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+  if (picked == null) return null;
+  final exif = await readExif(await picked.readAsBytes());
+  final takenAt = _exifTime(exif.shotAt) ?? DateTime.now().toUtc().toIso8601String();
+  return _save(ref, entranceId, picked, takenAt: takenAt);
+}
