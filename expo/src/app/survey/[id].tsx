@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { EntranceSurvey } from '../../contract/contract';
+import { type Entrance, EntranceSurvey } from '../../contract/contract';
 import { submitSurvey, useEntrance } from '../../store';
 import { type Colors, useColors } from '../../theme';
 
@@ -25,6 +25,13 @@ const fromNumber = (n: number | null) =>
 export default function SurveyScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const entrance = useEntrance(id);
+  // The row comes from SQLite just after the first render: build the form
+  // only once it is here, so the form's default values are the entrance's.
+  if (!entrance) return null;
+  return <SurveyForm id={id} entrance={entrance} />;
+}
+
+function SurveyForm({ id, entrance }: { id: string; entrance: Entrance }) {
   const colors = useColors();
 
   const form = useForm({
@@ -45,13 +52,11 @@ export default function SurveyScreen() {
     },
     // The contract's own schema validates the whole form on every change.
     validators: { onChange: EntranceSurvey },
-    onSubmit: ({ value }) => {
-      submitSurvey(id, EntranceSurvey.parse(value));
+    onSubmit: async ({ value }) => {
+      await submitSurvey(id, EntranceSurvey.parse(value));
       router.back();
     },
   });
-
-  if (!entrance) return null;
 
   const input = [styles.input, { color: colors.text, borderColor: colors.border }];
 
