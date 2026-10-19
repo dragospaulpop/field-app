@@ -27,6 +27,8 @@ class MapScreen extends ConsumerWidget {
     final links = ref.watch(connectivityProvider).value ?? const [ConnectivityResult.other];
     final online = !links.contains(ConnectivityResult.none);
     final token = ref.watch(tokenProvider).value;
+    final recent = ref.watch(recentProvider); // exercise 5
+    final names = {for (final e in entrances) e.id: e.entranceName};
     final done =
         entrances.where((e) => e.surveyStatus != SurveyStatus.not_started).length;
     return Stack(
@@ -76,6 +78,8 @@ class MapScreen extends ConsumerWidget {
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Text('${entrances.length} entrances · $done surveyed',
                         style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text('Recently opened: ${recent.isEmpty ? 'none' : recent.map((id) => names[id] ?? '?').join(', ')}',
+                        style: Theme.of(context).textTheme.bodySmall),
                     const SizedBox(height: 6),
                     // Wrap, not Row: the contract has its own Row (the base of every entity).
                     Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
