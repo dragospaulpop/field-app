@@ -51,6 +51,14 @@ class _PhotosCardState extends ConsumerState<PhotosCard> {
                   child: const Text('Take a photo'),
                 ),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                  onPressed: _busy ? null : () => _run(() => pickPhoto(ref, widget.entranceId)),
+                  child: const Text('From the gallery'),
+                ),
+              ),
             ]),
             if (_exif case final x?)
               Padding(
