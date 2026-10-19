@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { create } from 'zustand';
+import * as Crypto from 'expo-crypto';
 import type { Building, Entrance, EntranceSurvey } from './contract/contract';
 import { ME } from './contract/fixtures';
 import { db } from './db/db';
@@ -43,6 +44,51 @@ export async function submitSurvey(id: string, survey: EntranceSurvey) {
       lastError: null,
     })
     .where(eq(entrances.id, id));
+}
+
+/**
+ * A building the office missed: the worker stands at its door and makes both
+ * rows on the phone, with ids born here (UUID v4). The office will learn of it
+ * at the first sync (week 4); until then it is 'pending', like any new row.
+ */
+export async function addMissedEntrance(at: { lat: number; lng: number }): Promise<string> {
+  const now = new Date().toISOString();
+  const buildingId = Crypto.randomUUID();
+  const entranceId = Crypto.randomUUID();
+  await db.insert(buildings).values({
+    id: buildingId,
+    createdAt: now,
+    updatedAt: now,
+    label: 'New building',
+    comment: 'Added in the field: not on the office map.',
+    syncState: 'pending',
+  });
+  await db.insert(entrances).values({
+    id: entranceId,
+    createdAt: now,
+    updatedAt: now,
+    buildingId,
+    lat: at.lat,
+    lng: at.lng,
+    street: '?', // the survey asks for the real address
+    number: '?',
+    entranceName: 'Sc. 1',
+    coordsConfirmed: true, // the pin is where the worker stands: at the door
+    correctedLat: null,
+    correctedLng: null,
+    addressConfirmed: false,
+    stories: null,
+    flats: null,
+    elevators: null,
+    yearBuilt: null,
+    groundFloorCommercial: null,
+    comment: null,
+    surveyStatus: 'in_progress',
+    surveyedBy: null,
+    surveyedAt: null,
+    syncState: 'pending',
+  });
+  return entranceId;
 }
 
 // ---------------------------------------------------------------------------
