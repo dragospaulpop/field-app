@@ -1,8 +1,9 @@
 import { useForm } from '@tanstack/react-form';
 import * as Haptics from 'expo-haptics';
+import Storage from 'expo-sqlite/kv-store';
 import { router, useLocalSearchParams } from 'expo-router';
-import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { type ReactNode, useEffect, useMemo } from 'react';
+import { AppState, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { type Entrance, EntranceSurvey } from '../../contract/contract';
 import { locate } from '../../location';
@@ -26,9 +27,15 @@ export default function SurveyScreen() {
 
 function SurveyForm({ id, entrance }: { id: string; entrance: Entrance }) {
   const colors = useColors();
+  const draftKey = `field.draft.${id}`;
+  const draft = useMemo(() => {
+    const saved = Storage.getItemSync(draftKey);
+    return saved ? JSON.parse(saved) : null;
+  }, [draftKey]);
 
   const form = useForm({
-    defaultValues: {
+    // Exercise 4: a draft saved when the app went to the background wins.
+    defaultValues: draft ?? {
       coordsConfirmed: entrance?.coordsConfirmed ?? false,
       correctedLat: entrance?.correctedLat ?? null,
       correctedLng: entrance?.correctedLng ?? null,
@@ -47,11 +54,21 @@ function SurveyForm({ id, entrance }: { id: string; entrance: Entrance }) {
     validators: { onChange: EntranceSurvey },
     onSubmit: async ({ value }) => {
       await submitSurvey(id, EntranceSurvey.parse(value));
+      Storage.removeItemSync(draftKey); // submitted: the draft is done
       // Saved: say it with the hand as well as the eyes (a no-op on the web).
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     },
   });
+
+  // Exercise 4: the phone may kill an app in the background without warning,
+  // so write what was typed when the app leaves the screen.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'background') Storage.setItemSync(draftKey, JSON.stringify(form.state.values));
+    });
+    return () => sub.remove();
+  }, [form, draftKey]);
 
   const input = [styles.input, { color: colors.text, borderColor: colors.border }];
 
