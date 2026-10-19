@@ -1,9 +1,10 @@
 import { useForm } from '@tanstack/react-form';
+import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import type { ReactNode } from 'react';
+import { type ReactNode, type RefObject, useEffect, useRef } from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { type Entrance, EntranceSurvey } from '../../contract/contract';
+import { locate } from '../../location';
 import { submitSurvey, useEntrance } from '../../store';
 import { type Colors, useColors } from '../../theme';
 
@@ -31,8 +33,31 @@ export default function SurveyScreen() {
   return <SurveyForm id={id} entrance={entrance} />;
 }
 
+/**
+ * When the keyboard opens, scroll the field being typed into to near the top,
+ * so the keyboard never sits on it (Android draws edge to edge since SDK 57 and
+ * no longer moves a focused field for us).
+ */
+function useScrollToFocused(scroll: RefObject<ScrollView | null>, content: RefObject<View | null>) {
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      const input = TextInput.State.currentlyFocusedInput();
+      if (!input || !content.current) return;
+      input.measureLayout(content.current, (_x, y) => {
+        // Wait one beat: KeyboardAvoidingView pads the screen after this event,
+        // and only then can the ScrollView scroll that far.
+        setTimeout(() => scroll.current?.scrollTo({ y: Math.max(0, y - 120), animated: true }), 100);
+      });
+    });
+    return () => sub.remove();
+  }, [scroll, content]);
+}
+
 function SurveyForm({ id, entrance }: { id: string; entrance: Entrance }) {
   const colors = useColors();
+  const scroll = useRef<ScrollView>(null);
+  const content = useRef<View>(null);
+  useScrollToFocused(scroll, content);
 
   const form = useForm({
     defaultValues: {
@@ -54,6 +79,8 @@ function SurveyForm({ id, entrance }: { id: string; entrance: Entrance }) {
     validators: { onChange: EntranceSurvey },
     onSubmit: async ({ value }) => {
       await submitSurvey(id, EntranceSurvey.parse(value));
+      // Saved: say it with the hand as well as the eyes (a no-op on the web).
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     },
   });
@@ -61,102 +88,118 @@ function SurveyForm({ id, entrance }: { id: string; entrance: Entrance }) {
   const input = [styles.input, { color: colors.text, borderColor: colors.border }];
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <form.Field name="coordsConfirmed">
-          {(field) => (
-            <Row label="The pin is at the door" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
-              <Switch value={field.state.value} onValueChange={field.handleChange} />
-            </Row>
-          )}
-        </form.Field>
-        <form.Subscribe selector={(s) => s.values.coordsConfirmed}>
-          {(confirmed) =>
-            confirmed ? null : (
-              <View style={styles.pair}>
-                <form.Field name="correctedLat">
-                  {(field) => (
-                    <Labeled label="Corrected latitude" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
-                      <TextInput style={input} keyboardType="decimal-pad" value={fromNumber(field.state.value)} onChangeText={(t) => field.handleChange(toNullable(t))} onBlur={field.handleBlur} />
-                    </Labeled>
-                  )}
-                </form.Field>
-                <form.Field name="correctedLng">
-                  {(field) => (
-                    <Labeled label="Corrected longitude" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
-                      <TextInput style={input} keyboardType="decimal-pad" value={fromNumber(field.state.value)} onChangeText={(t) => field.handleChange(toNullable(t))} onBlur={field.handleBlur} />
-                    </Labeled>
-                  )}
-                </form.Field>
-              </View>
-            )
-          }
-        </form.Subscribe>
-
-        {(['street', 'number', 'entranceName'] as const).map((name) => (
-          <form.Field key={name} name={name}>
+    // Edge to edge, Android no longer shrinks the window for the keyboard:
+    // pad the bottom by the keyboard's height, on both platforms.
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior="padding">
+      <ScrollView ref={scroll} keyboardShouldPersistTaps="handled">
+        <View ref={content} style={styles.content}>
+          <form.Field name="coordsConfirmed">
             {(field) => (
-              <Labeled label={{ street: 'Street', number: 'Number', entranceName: 'Entrance' }[name]} colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
-                <TextInput style={input} value={field.state.value} onChangeText={field.handleChange} onBlur={field.handleBlur} />
+              <Row label="The pin is at the door" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
+                <Switch value={field.state.value} onValueChange={field.handleChange} />
+              </Row>
+            )}
+          </form.Field>
+          <form.Subscribe selector={(s) => s.values.coordsConfirmed}>
+            {(confirmed) =>
+              confirmed ? null : (
+                <View style={styles.pair}>
+                  <form.Field name="correctedLat">
+                    {(field) => (
+                      <Labeled label="Corrected latitude" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
+                        <TextInput style={input} keyboardType="decimal-pad" value={fromNumber(field.state.value)} onChangeText={(t) => field.handleChange(toNullable(t))} onBlur={field.handleBlur} />
+                      </Labeled>
+                    )}
+                  </form.Field>
+                  <form.Field name="correctedLng">
+                    {(field) => (
+                      <Labeled label="Corrected longitude" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
+                        <TextInput style={input} keyboardType="decimal-pad" value={fromNumber(field.state.value)} onChangeText={(t) => field.handleChange(toNullable(t))} onBlur={field.handleBlur} />
+                      </Labeled>
+                    )}
+                  </form.Field>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={async () => {
+                      const fix = await locate();
+                      if (!fix) return;
+                      // Five decimals is about a metre: more would be false precision.
+                      form.setFieldValue('correctedLat', Number(fix.lat.toFixed(5)));
+                      form.setFieldValue('correctedLng', Number(fix.lng.toFixed(5)));
+                    }}
+                    style={[styles.outline, { borderColor: colors.primary }]}
+                  >
+                    <Text style={{ color: colors.primary, fontWeight: '700' }}>
+                      Use my position
+                    </Text>
+                  </Pressable>
+                </View>
+              )
+            }
+          </form.Subscribe>
+
+          {(['street', 'number', 'entranceName'] as const).map((name) => (
+            <form.Field key={name} name={name}>
+              {(field) => (
+                <Labeled label={{ street: 'Street', number: 'Number', entranceName: 'Entrance' }[name]} colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
+                  <TextInput style={input} value={field.state.value} onChangeText={field.handleChange} onBlur={field.handleBlur} />
+                </Labeled>
+              )}
+            </form.Field>
+          ))}
+          <form.Field name="addressConfirmed">
+            {(field) => (
+              <Row label="I checked the address" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
+                <Switch value={field.state.value} onValueChange={field.handleChange} />
+              </Row>
+            )}
+          </form.Field>
+
+          {(
+            [
+              ['stories', 'Stories'],
+              ['flats', 'Flats'],
+              ['elevators', 'Elevators'],
+              ['yearBuilt', 'Year built'],
+            ] as const
+          ).map(([name, label]) => (
+            <form.Field key={name} name={name}>
+              {(field) => (
+                <Labeled label={label} colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
+                  <TextInput style={input} keyboardType="number-pad" value={fromNumber(field.state.value)} onChangeText={(t) => field.handleChange(toNumber(t))} onBlur={field.handleBlur} />
+                </Labeled>
+              )}
+            </form.Field>
+          ))}
+          <form.Field name="groundFloorCommercial">
+            {(field) => (
+              <Row label="Shops on the ground floor" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
+                <Switch value={field.state.value} onValueChange={field.handleChange} />
+              </Row>
+            )}
+          </form.Field>
+          <form.Field name="comment">
+            {(field) => (
+              <Labeled label="Comment" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
+                <TextInput style={[input, styles.multiline]} multiline value={field.state.value ?? ''} onChangeText={(t) => field.handleChange(t === '' ? null : t)} onBlur={field.handleBlur} />
               </Labeled>
             )}
           </form.Field>
-        ))}
-        <form.Field name="addressConfirmed">
-          {(field) => (
-            <Row label="I checked the address" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
-              <Switch value={field.state.value} onValueChange={field.handleChange} />
-            </Row>
-          )}
-        </form.Field>
 
-        {(
-          [
-            ['stories', 'Stories'],
-            ['flats', 'Flats'],
-            ['elevators', 'Elevators'],
-            ['yearBuilt', 'Year built'],
-          ] as const
-        ).map(([name, label]) => (
-          <form.Field key={name} name={name}>
-            {(field) => (
-              <Labeled label={label} colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
-                <TextInput style={input} keyboardType="number-pad" value={fromNumber(field.state.value)} onChangeText={(t) => field.handleChange(toNumber(t))} onBlur={field.handleBlur} />
-              </Labeled>
+          <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting] as const}>
+            {([canSubmit, isSubmitting]) => (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !canSubmit }}
+                disabled={!canSubmit || isSubmitting}
+                onPress={() => form.handleSubmit()}
+                style={[styles.button, { backgroundColor: canSubmit ? colors.primary : colors.border }]}
+              >
+                <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Submit survey</Text>
+              </Pressable>
             )}
-          </form.Field>
-        ))}
-        <form.Field name="groundFloorCommercial">
-          {(field) => (
-            <Row label="Shops on the ground floor" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
-              <Switch value={field.state.value} onValueChange={field.handleChange} />
-            </Row>
-          )}
-        </form.Field>
-        <form.Field name="comment">
-          {(field) => (
-            <Labeled label="Comment" colors={colors} errors={field.state.meta.errors} touched={field.state.meta.isTouched}>
-              <TextInput style={[input, styles.multiline]} multiline value={field.state.value ?? ''} onChangeText={(t) => field.handleChange(t === '' ? null : t)} onBlur={field.handleBlur} />
-            </Labeled>
-          )}
-        </form.Field>
-
-        <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting] as const}>
-          {([canSubmit, isSubmitting]) => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !canSubmit }}
-              disabled={!canSubmit || isSubmitting}
-              onPress={() => form.handleSubmit()}
-              style={[styles.button, { backgroundColor: canSubmit ? colors.primary : colors.border }]}
-            >
-              <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Submit survey</Text>
-            </Pressable>
-          )}
-        </form.Subscribe>
+          </form.Subscribe>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -208,5 +251,6 @@ const styles = StyleSheet.create({
   pair: { gap: 14 },
   input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, minHeight: 48, fontSize: 16 },
   multiline: { minHeight: 96, textAlignVertical: 'top', paddingTop: 12 },
+  outline: { minHeight: 48, borderWidth: 2, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   button: { minHeight: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
 });
