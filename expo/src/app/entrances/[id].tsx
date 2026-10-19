@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { HereCard } from '../../components/HereCard';
 import { StatusChip } from '../../components/StatusChip';
 import { buildings } from '../../contract/fixtures';
 import { useEntrance } from '../../store';
@@ -70,6 +71,7 @@ export default function EntranceScreen() {
       >
         <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Survey</Text>
       </Pressable>
+      <HereCard />
     </ScrollView>
   );
 }
