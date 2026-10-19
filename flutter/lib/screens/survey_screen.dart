@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../contract/contract.dart';
+import '../location.dart';
 import '../providers.dart';
 
 class SurveyScreen extends ConsumerStatefulWidget {
@@ -96,6 +98,8 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
     setState(() => _ruleErrors = rules);
     if (!fieldsOk || rules.isNotEmpty) return;
     await ref.read(databaseProvider).submitSurvey(candidate, ref.read(meProvider));
+    // Saved: say it with the hand as well as the eyes (nothing happens on the web).
+    await HapticFeedback.mediumImpact();
     if (mounted) context.pop();
   }
 
@@ -139,6 +143,9 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
+          // Drag the list to put the keyboard away. The Scaffold already shrinks
+          // the body above the keyboard and scrolls the focused field into view.
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           children: [
             SwitchListTile(
               title: const Text('The pin is at the door'),
@@ -151,6 +158,18 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
               gap,
               _field('correctedLng', 'Corrected longitude', _coordRule(validateLng), keyboard: decimal),
               if (_ruleErrors['correctedLng'] != null) _ruleError('correctedLng')!,
+              const SizedBox(height: 8),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                onPressed: () async {
+                  final fix = await locate(context, ref);
+                  if (fix == null) return;
+                  // Five decimals is about a metre: more would be false precision.
+                  _text['correctedLat']!.text = fix.lat.toStringAsFixed(5);
+                  _text['correctedLng']!.text = fix.lng.toStringAsFixed(5);
+                },
+                child: const Text('Use my position'),
+              ),
               gap,
             ],
             _field('street', 'Street', validateStreet),
