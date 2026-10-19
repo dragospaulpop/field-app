@@ -1,7 +1,7 @@
 {
   "name": "field-app-expo",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "dependencies": {
     "@tanstack/react-form": "^1.33.5",
     "expo": "~57.0.30",
