@@ -34,9 +34,16 @@ export default function EntranceScreen() {
       <Text style={[styles.h1, { color: colors.text }]}>
         {entrance.street} {entrance.number}
       </Text>
-      <Text style={{ color: colors.muted }}>
-        {entrance.entranceName} · {building?.label}
-      </Text>
+      <Text style={{ color: colors.muted }}>{entrance.entranceName}</Text>
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push(`/buildings/${entrance.buildingId}`)}
+        style={styles.link}
+      >
+        <Text style={{ color: colors.primary, fontWeight: '600' }}>
+          {building?.label ?? 'Building'} · every entrance ›
+        </Text>
+      </Pressable>
       <StatusChip status={entrance.surveyStatus} />
       <Text style={{ color: colors.muted }}>
         Office pin: {entrance.lat.toFixed(5)}, {entrance.lng.toFixed(5)}
@@ -69,6 +76,7 @@ export default function EntranceScreen() {
 const styles = StyleSheet.create({
   content: { padding: 16, gap: 12, alignItems: 'flex-start' },
   h1: { fontSize: 24, fontWeight: '700' },
+  link: { minHeight: 44, justifyContent: 'center' },
   table: { alignSelf: 'stretch', borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   value: { flexShrink: 1, textAlign: 'right', fontWeight: '600' },
