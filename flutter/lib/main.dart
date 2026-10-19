@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'db/database.dart';
 import 'providers.dart';
+import 'session.dart';
 
 import 'screens/building_screen.dart';
 import 'screens/entrance_screen.dart';
@@ -19,6 +20,7 @@ Future<void> main() async {
   // The app's truth from now on: SQLite, seeded from the fixtures once.
   final db = AppDatabase();
   await db.seedIfEmpty(fixtures.buildings, fixtures.entrances);
+  _startAt = await lastTab(); // reopen on the tab the app was closed on
   runApp(ProviderScope(
     // Hand the two things main() opened to every provider that asks for them.
     overrides: [
@@ -29,8 +31,13 @@ Future<void> main() async {
   ));
 }
 
+const _tabs = ['/map', '/route', '/inbox'];
+var _startAt = _tabs.first;
+
+// A top-level final is created on first use (in FieldApp), after main() has
+// read _startAt.
 final _router = GoRouter(
-  initialLocation: '/map',
+  initialLocation: _startAt,
   routes: [
     // The three tabs: each branch keeps its own navigation stack.
     StatefulShellRoute.indexedStack(
@@ -111,8 +118,10 @@ class TabsShell extends ConsumerWidget {
       bottomNavigationBar: NavigationBar(
         selectedIndex: shell.currentIndex,
         // Tapping the current tab again goes back to its first screen.
-        onDestinationSelected: (i) =>
-            shell.goBranch(i, initialLocation: i == shell.currentIndex),
+        onDestinationSelected: (i) {
+          shell.goBranch(i, initialLocation: i == shell.currentIndex);
+          saveLastTab(_tabs[i]);
+        },
         destinations: [
           const NavigationDestination(icon: Icon(Icons.map_outlined), label: 'Map'),
           const NavigationDestination(icon: Icon(Icons.list_alt), label: 'My route'),
