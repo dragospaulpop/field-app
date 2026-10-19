@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'db/database.dart';
+import 'providers.dart';
 
 import 'screens/building_screen.dart';
 import 'screens/entrance_screen.dart';
@@ -17,8 +19,14 @@ Future<void> main() async {
   // The app's truth from now on: SQLite, seeded from the fixtures once.
   final db = AppDatabase();
   await db.seedIfEmpty(fixtures.buildings, fixtures.entrances);
-  final store = FieldStore(fixtures);
-  runApp(StoreScope(store: store, child: const FieldApp()));
+  runApp(ProviderScope(
+    // Hand the two things main() opened to every provider that asks for them.
+    overrides: [
+      fixturesProvider.overrideWithValue(fixtures),
+      databaseProvider.overrideWithValue(db),
+    ],
+    child: const FieldApp(),
+  ));
 }
 
 final _router = GoRouter(
@@ -85,15 +93,14 @@ class FieldApp extends StatelessWidget {
   }
 }
 
-class TabsShell extends StatelessWidget {
+class TabsShell extends ConsumerWidget {
   const TabsShell({super.key, required this.shell});
 
   final StatefulNavigationShell shell;
 
   @override
-  Widget build(BuildContext context) {
-    final store = StoreScope.of(context);
-    final f = store.fixtures;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final f = ref.watch(fixturesProvider);
     final unread = f.messages
         .where((m) => m.authorId != f.me && !m.readAt.containsKey(f.me))
         .where((m) => f.conversations

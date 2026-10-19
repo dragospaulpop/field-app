@@ -113,4 +113,38 @@ class AppDatabase extends _$AppDatabase {
       ]);
     });
   }
+
+  // ---- Reads: streams that emit again whenever a table they read changes ----
+
+  Stream<List<Entrance>> watchEntrances() => select(entrances)
+      .watch()
+      .map((rows) => [for (final r in rows) Entrance.fromJson(r.toJson())]);
+
+  Stream<Entrance?> watchEntrance(String id) =>
+      (select(entrances)..where((e) => e.id.equals(id)))
+          .watchSingleOrNull()
+          .map((r) => r == null ? null : Entrance.fromJson(r.toJson()));
+
+  Stream<Building?> watchBuilding(String id) =>
+      (select(buildings)..where((b) => b.id.equals(id)))
+          .watchSingleOrNull()
+          .map((r) => r == null ? null : Building.fromJson(r.toJson()));
+
+  // ---- Writes ----
+
+  /// The survey goes to SQLite: it survives a restart and waits for week 4's push.
+  Future<void> submitSurvey(Entrance surveyed, String me) {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final row = surveyed.copyWith(
+      surveyStatus: SurveyStatus.submitted,
+      surveyedBy: me,
+      surveyedAt: now,
+      updatedAt: now,
+    );
+    return into(entrances).insertOnConflictUpdate(EntranceRow.fromJson({
+      ...row.toJson(),
+      'syncState': 'pending', // the office has not seen this version yet
+      'lastError': null,
+    }));
+  }
 }
