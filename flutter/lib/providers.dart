@@ -33,3 +33,20 @@ final buildingProvider = StreamProvider.family<Building?, String>(
 final photosProvider = StreamProvider.family<List<PhotoRow>, String>(
   (ref, entranceId) => ref.watch(databaseProvider).watchPhotos(entranceId),
 );
+
+final openedAtProvider = StreamProvider.family<String?, String>(
+  (ref, id) => ref.watch(databaseProvider).watchOpenedAt(id),
+);
+
+/// Exercise 5: the last five entrances opened, newest first (client state).
+class RecentNotifier extends Notifier<List<String>> {
+  @override
+  List<String> build() => const [];
+
+  // A NEW list every time. state.add(id) would change the old list in place:
+  // Riverpod compares the old and new state, sees the same list, and nobody
+  // rebuilds (and a const list throws).
+  void open(String id) => state = [id, ...state.where((x) => x != id)].take(5).toList();
+}
+
+final recentProvider = NotifierProvider<RecentNotifier, List<String>>(RecentNotifier.new);
