@@ -1,24 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../store.dart';
+import '../providers.dart';
 import 'status_chip.dart';
 
 String show(Object? v) => v == null ? '—' : v is bool ? (v ? 'Yes' : 'No') : '$v';
 
-class EntranceScreen extends StatelessWidget {
+class EntranceScreen extends ConsumerWidget {
   const EntranceScreen({super.key, required this.id});
 
   final String id;
 
   @override
-  Widget build(BuildContext context) {
-    final store = StoreScope.of(context);
-    final e = store.entrance(id);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final found = ref.watch(entranceProvider(id));
+    if (found.isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    final e = found.value;
     if (e == null) {
       return Scaffold(appBar: AppBar(), body: const Center(child: Text('No such entrance.')));
     }
-    final building = store.fixtures.buildings.firstWhere((b) => b.id == e.buildingId);
+    // From SQLite, not the fixtures: a building made on the phone is there too.
+    final building = ref.watch(buildingProvider(e.buildingId)).value;
     final rows = {
       'Pin confirmed': e.coordsConfirmed,
       'Address checked': e.addressConfirmed,
@@ -41,14 +44,14 @@ class EntranceScreen extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: TextButton(
               onPressed: () => context.push('/buildings/${e.buildingId}'),
-              child: Text('${building.label} · every entrance ›'),
+              child: Text('${building?.label ?? 'Building'} · every entrance ›'),
             ),
           ),
           const SizedBox(height: 8),
           Align(alignment: Alignment.centerLeft, child: StatusChip(status: e.surveyStatus)),
           const SizedBox(height: 8),
           Text('Office pin: ${e.lat.toStringAsFixed(5)}, ${e.lng.toStringAsFixed(5)}'),
-          if (building.comment != null) Text('Office note: ${building.comment}'),
+          if (building?.comment != null) Text('Office note: ${building!.comment}'),
           const SizedBox(height: 8),
           Card(
             child: Column(children: [

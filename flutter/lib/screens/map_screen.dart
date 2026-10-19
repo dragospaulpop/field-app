@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../contract/contract.dart';
-import '../store.dart';
+import '../providers.dart';
 import 'status_chip.dart';
 
 // OpenStreetMap's public tiles, weeks 2–4. Week 5 swaps this one constant for
@@ -12,12 +13,12 @@ import 'status_chip.dart';
 const tiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const bucharest = LatLng(44.4355, 26.1025);
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends ConsumerWidget {
   const MapScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final entrances = StoreScope.of(context).entrances;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entrances = ref.watch(entrancesProvider).value ?? const <Entrance>[];
     final done =
         entrances.where((e) => e.surveyStatus != SurveyStatus.not_started).length;
     return Stack(
