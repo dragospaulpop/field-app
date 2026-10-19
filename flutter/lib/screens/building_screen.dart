@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../contract/contract.dart';
-import '../store.dart';
+import '../providers.dart';
 import 'status_chip.dart';
 
 const _surveyed = {SurveyStatus.submitted, SurveyStatus.approved, SurveyStatus.needs_rework};
 
-class BuildingScreen extends StatelessWidget {
+class BuildingScreen extends ConsumerWidget {
   const BuildingScreen({super.key, required this.id});
 
   final String id;
 
   @override
-  Widget build(BuildContext context) {
-    final store = StoreScope.of(context);
-    final building = store.fixtures.buildings.where((b) => b.id == id).firstOrNull;
-    final entrances = store.entrances.where((e) => e.buildingId == id).toList();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final building = ref.watch(buildingProvider(id)).value;
+    final entrances = [
+      for (final e in ref.watch(entrancesProvider).value ?? const <Entrance>[])
+        if (e.buildingId == id) e,
+    ];
     final surveyed = entrances.where((e) => _surveyed.contains(e.surveyStatus)).length;
     final text = Theme.of(context).textTheme;
     return Scaffold(
