@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers.dart';
+import 'here_card.dart';
 import 'status_chip.dart';
 
 String show(Object? v) => v == null ? '—' : v is bool ? (v ? 'Yes' : 'No') : '$v';
@@ -65,6 +66,8 @@ class EntranceScreen extends ConsumerWidget {
             onPressed: () => context.push('/entrances/${e.id}/survey'),
             child: const Text('Survey'),
           ),
+          const SizedBox(height: 8),
+          const HereCard(),
         ],
       ),
     );
