@@ -26,6 +26,8 @@ export type CloudSurvey = { state: 'none' } | { state: 'denied' } | { state: 'se
 export interface SurveysRepository {
   /** Idempotent: sending the same survey twice leaves one document. */
   push(survey: SurveyDoc): Promise<void>;
+  /** Exercise 2: my newest sent survey (a query with where + orderBy), live. */
+  watchLastSent(uid: string, onChange: (last: SurveyDoc | null) => void, onError: (e: Error) => void): () => void;
   /** Exercise 1: follow one survey document, live. Returns "stop". */
   watchOne(id: string, onChange: (s: CloudSurvey) => void): () => void;
 }
