@@ -3216,10 +3216,11 @@ class $$BuildingsTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (entrancesRefs)
-                    await $_getPrefetchedData<
+                    await $_getPrefetchedDataByColumns<
                       BuildingRow,
                       $BuildingsTable,
-                      EntranceRow
+                      EntranceRow,
+                      $EntrancesTable
                     >(
                       currentTable: table,
                       referencedTable: $$BuildingsTableReferences
@@ -3230,8 +3231,8 @@ class $$BuildingsTableTableManager
                             table,
                             p0,
                           ).entrancesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.buildingId == item.id),
+                      currentColumn: 'id',
+                      referencedColumn: 'building_id',
                       typedResults: items,
                     ),
                 ];
@@ -4019,18 +4020,19 @@ class $$EntrancesTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (photosRefs)
-                    await $_getPrefetchedData<
+                    await $_getPrefetchedDataByColumns<
                       EntranceRow,
                       $EntrancesTable,
-                      PhotoRow
+                      PhotoRow,
+                      $PhotosTable
                     >(
                       currentTable: table,
                       referencedTable: $$EntrancesTableReferences
                           ._photosRefsTable(db),
                       managerFromTypedResult: (p0) =>
                           $$EntrancesTableReferences(db, table, p0).photosRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.entranceId == item.id),
+                      currentColumn: 'id',
+                      referencedColumn: 'entrance_id',
                       typedResults: items,
                     ),
                 ];

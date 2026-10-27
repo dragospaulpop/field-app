@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../contract/contract.dart';
 import '../location.dart';
 import '../providers.dart';
+import '../sync.dart';
 
 class SurveyScreen extends ConsumerStatefulWidget {
   const SurveyScreen({super.key, required this.id});
@@ -135,6 +136,7 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
     setState(() => _ruleErrors = rules);
     if (!fieldsOk || rules.isNotEmpty) return;
     await ref.read(databaseProvider).submitSurvey(candidate, ref.read(meProvider));
+    pushSurveys(ref); // and send it now, if the network is there
     // Saved: say it with the hand as well as the eyes (nothing happens on the web).
     await _prefs.remove(_draftKey); // submitted: the draft is done
     await HapticFeedback.mediumImpact();
