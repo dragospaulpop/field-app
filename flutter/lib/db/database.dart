@@ -106,22 +106,48 @@ class AppDatabase extends _$AppDatabase {
         },
       );
 
-  /// First launch only: copy the office's fixtures into the empty tables.
-  /// A contract object and a row share their field names, so JSON carries one
-  /// into the other; the local-only columns are added on the way.
-  Future<void> seedIfEmpty(List<Building> fromOffice, List<Entrance> entrancesFromOffice) async {
-    final n = await entrances.count().getSingle();
+  /// First launch only: copy the office's buildings into the empty table.
+  /// The entrances no longer come from the fixtures: since week 4 they are the
+  /// pins the cloud assigns to the signed-in worker (sync.dart). A contract
+  /// object and a row share their field names, so JSON carries one into the
+  /// other; the local-only columns are added on the way.
+  Future<void> seedIfEmpty(List<Building> fromOffice) async {
+    final n = await buildings.count().getSingle();
     if (n > 0) return;
     const synced = {'syncState': 'synced', 'lastError': null}; // the office has them
     await batch((b) {
       b.insertAll(buildings, [
         for (final x in fromOffice) BuildingRow.fromJson({...x.toJson(), ...synced}),
       ]);
-      b.insertAll(entrances, [
-        for (final x in entrancesFromOffice) EntranceRow.fromJson({...x.toJson(), ...synced}),
-      ]);
     });
   }
+
+  /// The pull: the cloud's list of my pins becomes the entrances table. A pin
+  /// updates its row only when it is newer (updatedAt) than the row, and never
+  /// over an unsent survey (syncState pending or failed): the survey the worker
+  /// just sent is newer than the office's pin, so it stays on screen. A synced
+  /// row that is no longer in the list was taken away: deleted.
+  Future<void> savePins(List<Entrance> pins) => transaction(() async {
+        for (final pin in pins) {
+          final row = EntranceRow.fromJson({...pin.toJson(), 'syncState': 'synced', 'lastError': null})
+              .toCompanion(false)
+              .copyWith(openedAt: const Value.absent()); // the phone's own column stays
+          await into(entrances).insert(
+            row,
+            onConflict: DoUpdate(
+              (_) => row,
+              where: (old) =>
+                  old.syncState.equalsValue(SyncState.synced) &
+                  old.updatedAt.isSmallerThanValue(pin.updatedAt),
+            ),
+          );
+        }
+        await (delete(entrances)
+              ..where((e) =>
+                  e.syncState.equalsValue(SyncState.synced) &
+                  e.id.isNotIn([for (final p in pins) p.id])))
+            .go();
+      });
 
   // ---- Reads: streams that emit again whenever a table they read changes ----
 

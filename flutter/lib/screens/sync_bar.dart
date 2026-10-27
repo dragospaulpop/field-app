@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth.dart';
 import '../providers.dart';
+import '../sync.dart';
 
 /// The banner's sync line: what the cloud has, what waits to be sent.
 class SyncBar extends ConsumerStatefulWidget {
@@ -30,8 +31,10 @@ class _SyncBarState extends ConsumerState<SyncBar> {
   @override
   Widget build(BuildContext context) {
     final small = Theme.of(context).textTheme.bodySmall;
+    final cloud = ref.watch(myPinsProvider).value;
     return Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
-      if (kDebugMode) TextButton(onPressed: _seed, child: const Text('Seed my pins')),
+      Text(cloud == null ? 'cloud: connecting…' : 'cloud: ${cloud.length} pins, live', style: small),
+      if (kDebugMode && cloud != null && cloud.isEmpty) TextButton(onPressed: _seed, child: const Text('Seed my pins')),
       if (_seeded != null) Text(_seeded!, style: small),
     ]);
   }
