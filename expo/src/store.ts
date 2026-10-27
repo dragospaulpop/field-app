@@ -1,4 +1,4 @@
-import { and, eq, lt, notInArray } from 'drizzle-orm';
+import { and, eq, inArray, lt, notInArray } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { create } from 'zustand';
 import * as Crypto from 'expo-crypto';
@@ -59,6 +59,48 @@ export async function savePins(pins: Entrance[]) {
       ),
     ),
   );
+}
+
+/**
+ * The outbox: submitted surveys the cloud has not confirmed yet. A missed
+ * building (week 3) waits: its building is not in the cloud before week 5.
+ */
+export async function outbox() {
+  const rows = await db
+    .select({ entrance: entrances })
+    .from(entrances)
+    .innerJoin(buildings, eq(entrances.buildingId, buildings.id))
+    .where(
+      and(
+        eq(entrances.surveyStatus, 'submitted'),
+        inArray(entrances.syncState, ['pending', 'failed']),
+        eq(buildings.syncState, 'synced'),
+      ),
+    );
+  return rows.map((r) => r.entrance);
+}
+
+/** After a push: synced, unless the worker changed the survey meanwhile. */
+export async function markSent(id: string, updatedAt: string, error: string | null) {
+  await db
+    .update(entrances)
+    .set(error ? { syncState: 'failed', lastError: error } : { syncState: 'synced', lastError: null })
+    .where(and(eq(entrances.id, id), eq(entrances.updatedAt, updatedAt)));
+}
+
+/** The banner's count: what still waits to be sent, and the last refusal. */
+export function useOutbox() {
+  const { data } = useLiveQuery(
+    db
+      .select({ syncState: entrances.syncState, lastError: entrances.lastError })
+      .from(entrances)
+      .where(inArray(entrances.syncState, ['pending', 'failed'])),
+  );
+  return {
+    pending: data.filter((r) => r.syncState === 'pending').length,
+    failed: data.filter((r) => r.syncState === 'failed').length,
+    lastError: data.find((r) => r.lastError)?.lastError ?? null,
+  };
 }
 
 /** Exercise 1: the new column, written like any other. */
