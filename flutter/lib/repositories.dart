@@ -13,7 +13,12 @@ abstract class PinsRepository {
 }
 
 /// What the cloud holds for one survey (course 2, exercise 1).
-enum CloudState { none, denied, sent }
+enum CloudState {
+  none,
+  denied,
+  pending, // exercise 4: written on this phone, the server has not confirmed it
+  sent,
+}
 
 typedef CloudSurvey = ({CloudState state, String? updatedAt});
 

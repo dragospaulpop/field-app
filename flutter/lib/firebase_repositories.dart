@@ -54,10 +54,14 @@ class FirebaseSurveysRepository implements SurveysRepository {
   Stream<CloudSurvey> watchOne(String id) => FirebaseFirestore.instance
       .collection('surveys')
       .doc(id)
-      .snapshots()
-      .map<CloudSurvey>((snap) => snap.exists
-          ? (state: CloudState.sent, updatedAt: snap.data()!['updatedAt'] as String?)
-          : (state: CloudState.none, updatedAt: null))
+      // Exercise 4: also emit when only the metadata changes, i.e. when the
+      // server confirms a write this phone made (hasPendingWrites true → false).
+      .snapshots(includeMetadataChanges: true)
+      .map<CloudSurvey>((snap) => !snap.exists
+          ? (state: CloudState.none, updatedAt: null)
+          : snap.metadata.hasPendingWrites
+              ? (state: CloudState.pending, updatedAt: null)
+              : (state: CloudState.sent, updatedAt: snap.data()!['updatedAt'] as String?))
       // permission-denied: the rules said no
       .transform(StreamTransformer.fromHandlers(
         handleError: (Object e, StackTrace s, EventSink<CloudSurvey> sink) =>
