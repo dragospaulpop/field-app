@@ -17,6 +17,8 @@ export function CloudStatus({ id }: { id: string }) {
         ? 'not sent yet'
         : cloud.state === 'denied'
           ? 'refused by the rules'
+          : cloud.state === 'pending'
+            ? 'written on this phone, waiting for the server'
           : `sent, ${new Date(cloud.updatedAt).toLocaleString()}`;
   return <Text style={{ color: colors.muted }}>In the cloud: {text}</Text>;
 }

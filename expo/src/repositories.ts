@@ -21,7 +21,11 @@ export interface PinsRepository {
 }
 
 /** What the cloud holds for one survey (course 2, exercise 1). */
-export type CloudSurvey = { state: 'none' } | { state: 'denied' } | { state: 'sent'; updatedAt: string };
+export type CloudSurvey =
+  | { state: 'none' }
+  | { state: 'denied' }
+  | { state: 'pending' } // exercise 4: written on this phone, the server has not confirmed it
+  | { state: 'sent'; updatedAt: string };
 
 export interface SurveysRepository {
   /** Idempotent: sending the same survey twice leaves one document. */

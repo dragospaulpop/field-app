@@ -55,8 +55,14 @@ export const firebaseSurveys: SurveysRepository = {
   watchOne(id, onChange) {
     return onSnapshot(
       doc(firestore, 'surveys', id),
-      (snap) =>
-        onChange(snap.exists() ? { state: 'sent', updatedAt: snap.data().updatedAt } : { state: 'none' }),
+      // Exercise 4: also call back when only the metadata changes, i.e. when the
+      // server confirms a write this phone made (hasPendingWrites true → false).
+      { includeMetadataChanges: true },
+      (snap) => {
+        if (!snap.exists()) onChange({ state: 'none' });
+        else if (snap.metadata.hasPendingWrites) onChange({ state: 'pending' });
+        else onChange({ state: 'sent', updatedAt: snap.data().updatedAt });
+      },
       () => onChange({ state: 'denied' }), // permission-denied: the rules said no
     );
   },
