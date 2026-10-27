@@ -3,11 +3,14 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Text, useColorScheme, View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { SignIn } from '../components/SignIn';
 import { openDb } from '../db/db';
+import { useUser } from '../firebase';
 
 export default function RootLayout() {
   const scheme = useColorScheme();
   const [state, setState] = useState<'opening' | 'ready' | Error>('opening');
+  const user = useUser();
   useEffect(() => {
     openDb().then(
       () => setState('ready'),
@@ -22,7 +25,9 @@ export default function RootLayout() {
       </View>
     );
   }
-  if (state === 'opening') return null; // a few milliseconds
+  if (state === 'opening' || user === undefined) return null; // a few milliseconds
+  // The auth-state gate: no user, no app. Signing in re-renders this layout.
+  if (user === null) return <SignIn />;
 
   return (
     // keyboard-controller tracks the keyboard for every screen (the survey, step 10).
