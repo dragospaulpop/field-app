@@ -19,17 +19,18 @@ class FirebasePinsRepository implements PinsRepository {
 
   @override
   Future<({int created, int refused})> seed(String uid, List<Entrance> pins) async {
-    // One write per pin: a pin someone else already has is refused by the
-    // rules (it would be an update), and the others still go through.
-    var created = 0;
-    await Future.wait([
-      for (final p in pins)
-        _pins
-            .doc(p.id)
-            .set({...p.toJson(), 'assignedTo': uid})
-            .then((_) => created++, onError: (Object _) {}),
-    ]);
-    return (created: created, refused: pins.length - created);
+    // Exercise 3: one batched write instead of 20 separate ones. A batch is
+    // all or nothing: if the rules refuse one pin, none is written.
+    final batch = FirebaseFirestore.instance.batch();
+    for (final p in pins) {
+      batch.set(_pins.doc(p.id), {...p.toJson(), 'assignedTo': uid});
+    }
+    try {
+      await batch.commit();
+      return (created: pins.length, refused: 0);
+    } on FirebaseException {
+      return (created: 0, refused: pins.length);
+    }
   }
 }
 
