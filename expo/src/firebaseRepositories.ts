@@ -1,4 +1,4 @@
-import { collection, doc, limit, onSnapshot, orderBy, query, setDoc, where } from 'firebase/firestore';
+import { collection, doc, limit, onSnapshot, orderBy, query, setDoc, where, writeBatch } from 'firebase/firestore';
 import type { Entrance } from './contract/contract';
 import { firestore } from './firebase';
 import type { PinsRepository, SurveyDoc, SurveysRepository } from './repositories';
@@ -21,13 +21,16 @@ export const firebasePins: PinsRepository = {
   },
 
   async seed(uid, pins) {
-    // One write per pin: a pin someone else already has is refused by the
-    // rules (it would be an update), and the others still go through.
-    const results = await Promise.allSettled(
-      pins.map((p) => setDoc(doc(firestore, 'pins', p.id), { ...p, assignedTo: uid })),
-    );
-    const created = results.filter((r) => r.status === 'fulfilled').length;
-    return { created, refused: pins.length - created };
+    // Exercise 3: one batched write instead of 20 separate ones. A batch is
+    // all or nothing: if the rules refuse one pin, none is written.
+    const batch = writeBatch(firestore);
+    for (const p of pins) batch.set(doc(firestore, 'pins', p.id), { ...p, assignedTo: uid });
+    try {
+      await batch.commit();
+      return { created: pins.length, refused: 0 };
+    } catch {
+      return { created: 0, refused: pins.length };
+    }
   },
 };
 
