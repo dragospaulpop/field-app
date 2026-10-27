@@ -1,15 +1,51 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'auth.dart';
 import 'contract/contract.dart';
 import 'providers.dart';
+import 'repositories.dart';
 
 /// Server state: my pins as the cloud has them, live (one Firestore listener).
 /// The banner watches it; SyncScope copies every new list into SQLite.
 final myPinsProvider = StreamProvider<List<Entrance>>(
   (ref) => ref.watch(pinsRepositoryProvider).watchMine(ref.watch(uidProvider)),
 );
+
+final outboxProvider = StreamProvider(
+  (ref) => ref.watch(databaseProvider).watchOutbox(),
+);
+
+var _pushing = false;
+
+/// The outbox push: every unsent survey goes up as surveys/{entranceId} with
+/// set(). The id is the survey's own, so a second push (the app was killed
+/// before it heard "ok") overwrites the same document: idempotent. Offline,
+/// set() waits until the network is back; SQLite keeps the survey meanwhile.
+Future<void> pushSurveys(WidgetRef ref) async {
+  if (_pushing) return; // one push at a time
+  _pushing = true;
+  final db = ref.read(databaseProvider);
+  final surveys = ref.read(surveysRepositoryProvider);
+  final uid = ref.read(uidProvider);
+  try {
+    for (final e in await db.outbox()) {
+      try {
+        await surveys.push(surveyDoc(e, uid));
+        await db.markSent(e.id, e.updatedAt, null);
+      } on FirebaseException catch (err) {
+        // permission-denied: the rules refused it (the pin is no longer mine).
+        await db.markSent(e.id, e.updatedAt, err.code);
+      }
+    }
+  } finally {
+    _pushing = false;
+  }
+}
 
 /// Wraps the signed-in app: while it is on screen, the pull runs. Signing out
 /// removes it, and Riverpod stops the listener nobody watches any more.
@@ -23,15 +59,32 @@ class SyncScope extends ConsumerStatefulWidget {
 }
 
 class _SyncScopeState extends ConsumerState<SyncScope> {
+  late final AppLifecycleListener _lifecycle;
+  late final StreamSubscription<List<ConnectivityResult>> _network;
+
   @override
   void initState() {
     super.initState();
+    // The push, at three moments: now, back in the foreground, and when the
+    // network comes back. (And on "Sync now", and after a submit.)
+    pushSurveys(ref);
+    _lifecycle = AppLifecycleListener(onResume: () => pushSurveys(ref));
+    _network = Connectivity().onConnectivityChanged.listen((links) {
+      if (!links.contains(ConnectivityResult.none)) pushSurveys(ref);
+    });
     // The pull: every snapshot of my pins goes to SQLite, the truth on the
     // phone. listenManual keeps the listener alive while this widget lives.
     ref.listenManual(myPinsProvider, (_, next) {
       final pins = next.value;
       if (pins != null) ref.read(databaseProvider).savePins(pins);
     }, fireImmediately: true);
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    _network.cancel();
+    super.dispose();
   }
 
   @override

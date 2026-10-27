@@ -149,6 +149,38 @@ class AppDatabase extends _$AppDatabase {
             .go();
       });
 
+  /// The outbox: submitted surveys the cloud has not confirmed yet. A missed
+  /// building (week 3) waits: its building is not in the cloud before week 5.
+  Future<List<Entrance>> outbox() async {
+    final q = select(entrances).join([
+      innerJoin(buildings, buildings.id.equalsExp(entrances.buildingId)),
+    ])
+      ..where(entrances.surveyStatus.equalsValue(SurveyStatus.submitted) &
+          entrances.syncState.isInValues([SyncState.pending, SyncState.failed]) &
+          buildings.syncState.equalsValue(SyncState.synced));
+    return [for (final r in await q.get()) Entrance.fromJson(r.readTable(entrances).toJson())];
+  }
+
+  /// After a push: synced, unless the worker changed the survey meanwhile.
+  Future<void> markSent(String id, String updatedAt, String? error) =>
+      (update(entrances)..where((e) => e.id.equals(id) & e.updatedAt.equals(updatedAt))).write(
+        EntrancesCompanion(
+          syncState: Value(error == null ? SyncState.synced : SyncState.failed),
+          lastError: Value(error),
+        ),
+      );
+
+  /// The banner's count: what still waits to be sent, and the last refusal.
+  Stream<({int pending, int failed, String? lastError})> watchOutbox() =>
+      (select(entrances)
+            ..where((e) => e.syncState.isInValues([SyncState.pending, SyncState.failed])))
+          .watch()
+          .map((rows) => (
+                pending: rows.where((r) => r.syncState == SyncState.pending).length,
+                failed: rows.where((r) => r.syncState == SyncState.failed).length,
+                lastError: rows.map((r) => r.lastError).nonNulls.firstOrNull,
+              ));
+
   // ---- Reads: streams that emit again whenever a table they read changes ----
 
   Stream<List<Entrance>> watchEntrances() => select(entrances)

@@ -32,10 +32,16 @@ class _SyncBarState extends ConsumerState<SyncBar> {
   Widget build(BuildContext context) {
     final small = Theme.of(context).textTheme.bodySmall;
     final cloud = ref.watch(myPinsProvider).value;
+    final box = ref.watch(outboxProvider).value;
     return Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
       Text(cloud == null ? 'cloud: connecting…' : 'cloud: ${cloud.length} pins, live', style: small),
       if (kDebugMode && cloud != null && cloud.isEmpty) TextButton(onPressed: _seed, child: const Text('Seed my pins')),
       if (_seeded != null) Text(_seeded!, style: small),
+      if (box != null) Text('${box.pending} to send · ${box.failed} refused', style: small),
+      TextButton(onPressed: () => pushSurveys(ref), child: const Text('Sync now')),
+      if (box?.lastError != null)
+        Text('last refusal: ${box!.lastError}',
+            style: small?.copyWith(color: Theme.of(context).colorScheme.error)),
     ]);
   }
 }
