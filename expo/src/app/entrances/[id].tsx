@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Entrance } from '../../contract/contract';
+import { CloudStatus } from '../../components/CloudStatus';
 import { HereCard } from '../../components/HereCard';
 import { Photos } from '../../components/Photos';
 import { StatusChip } from '../../components/StatusChip';
@@ -56,6 +57,7 @@ export default function EntranceScreen() {
         </Text>
       </Pressable>
       <StatusChip status={entrance.surveyStatus} />
+      <CloudStatus id={entrance.id} />
       <Text style={{ color: colors.muted }}>
         Office pin: {entrance.lat.toFixed(5)}, {entrance.lng.toFixed(5)}
       </Text>

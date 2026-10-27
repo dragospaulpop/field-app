@@ -37,4 +37,13 @@ export const firebaseSurveys: SurveysRepository = {
     // overwrites the same document instead of making a copy.
     await setDoc(doc(firestore, 'surveys', survey.id), survey);
   },
+
+  watchOne(id, onChange) {
+    return onSnapshot(
+      doc(firestore, 'surveys', id),
+      (snap) =>
+        onChange(snap.exists() ? { state: 'sent', updatedAt: snap.data().updatedAt } : { state: 'none' }),
+      () => onChange({ state: 'denied' }), // permission-denied: the rules said no
+    );
+  },
 };
