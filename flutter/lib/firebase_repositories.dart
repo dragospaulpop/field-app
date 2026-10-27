@@ -40,6 +40,16 @@ class FirebaseSurveysRepository implements SurveysRepository {
       FirebaseFirestore.instance.collection('surveys').doc(survey['id']! as String).set(survey);
 
   @override
+  Stream<Map<String, dynamic>?> watchLastSent(String uid) => FirebaseFirestore.instance
+      .collection('surveys')
+      // where on one field + orderBy on another: Firestore needs a composite index.
+      .where('surveyedBy', isEqualTo: uid)
+      .orderBy('surveyedAt', descending: true)
+      .limit(1)
+      .snapshots()
+      .map((snap) => snap.docs.isEmpty ? null : snap.docs.first.data());
+
+  @override
   Stream<CloudSurvey> watchOne(String id) => FirebaseFirestore.instance
       .collection('surveys')
       .doc(id)

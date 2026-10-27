@@ -18,6 +18,16 @@ final myPinsProvider = StreamProvider<List<Entrance>>(
   (ref) => ref.watch(pinsRepositoryProvider).watchMine(ref.watch(uidProvider)),
 );
 
+/// Exercise 2: the newest survey the cloud has from me.
+final lastSentProvider = StreamProvider<Map<String, dynamic>?>(
+  (ref) => ref.watch(surveysRepositoryProvider).watchLastSent(ref.watch(uidProvider)).handleError(
+    (Object e) {
+      debugPrint('$e'); // failed-precondition: the message holds the link that creates the index
+      throw e;
+    },
+  ),
+);
+
 final outboxProvider = StreamProvider(
   (ref) => ref.watch(databaseProvider).watchOutbox(),
 );

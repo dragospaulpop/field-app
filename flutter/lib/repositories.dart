@@ -23,6 +23,9 @@ abstract class SurveysRepository {
 
   /// Exercise 1: follow one survey document, live.
   Stream<CloudSurvey> watchOne(String id);
+
+  /// Exercise 2: my newest sent survey (a query with where + orderBy), live.
+  Stream<Map<String, dynamic>?> watchLastSent(String uid);
 }
 
 /// The surveyed fields of an entrance (the contract's survey form).
