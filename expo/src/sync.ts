@@ -1,10 +1,15 @@
 import { QueryClient } from '@tanstack/react-query';
 import { addNetworkStateListener } from 'expo-network';
 import { FirebaseError } from 'firebase/app';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { and, eq, inArray } from 'drizzle-orm';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { pins, surveys } from './cloud';
 import { type Entrance, EntranceSurvey } from './contract/contract';
+import { db } from './db/db';
+import { photos } from './db/schema';
+import { storage } from './firebase';
 import { markSent, outbox, savePins } from './store';
 
 /** Server state: what the cloud says right now. Screens still read SQLite. */
@@ -76,7 +81,30 @@ export async function pushSurveys(uid: string) {
         await markSent(e.id, e.updatedAt, err instanceof FirebaseError ? err.code : String(err));
       }
     }
+    // Step 11 (optional): the photos, when the project has Storage.
+    if (process.env.EXPO_PUBLIC_UPLOAD_PHOTOS === '1') await pushPhotos(uid);
   } finally {
     pushing = false;
+  }
+}
+
+/** Every photo not uploaded yet goes to photos/{uid}/{entranceId}/{photoId}.jpg. */
+async function pushPhotos(uid: string) {
+  const waiting = await db.select().from(photos).where(inArray(photos.uploadState, ['pending', 'failed']));
+  for (const p of waiting) {
+    try {
+      // fetch reads a file:// path on the phone and the data: URI on the web alike.
+      const blob = await (await fetch(p.localUri)).blob();
+      const file = ref(storage, `photos/${uid}/${p.entranceId}/${p.id}.jpg`);
+      await uploadBytes(file, blob, { contentType: blob.type || 'image/jpeg' });
+      const remoteUrl = await getDownloadURL(file);
+      await db.update(photos).set({ uploadState: 'uploaded', remoteUrl, lastError: null }).where(eq(photos.id, p.id));
+    } catch (err) {
+      const error = err instanceof FirebaseError ? err.code : String(err);
+      await db
+        .update(photos)
+        .set({ uploadState: 'failed', lastError: error })
+        .where(and(eq(photos.id, p.id), eq(photos.uploadState, p.uploadState)));
+    }
   }
 }

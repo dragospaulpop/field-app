@@ -10,6 +10,8 @@ function messageFor(e: unknown): string {
   const code = e instanceof FirebaseError ? e.code : '';
   switch (code) {
     case 'auth/invalid-credential':
+    case 'auth/user-not-found': // the Auth emulator (step 11) still answers with these two
+    case 'auth/wrong-password':
       return 'Wrong email or password.';
     case 'auth/invalid-email':
       return 'That is not an email address.';
