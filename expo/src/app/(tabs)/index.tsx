@@ -6,6 +6,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EntranceMap } from '../../components/EntranceMap';
+import { SyncBar } from '../../components/SyncBar';
 import { auth } from '../../firebase';
 import { locate } from '../../location';
 import { lastTab } from '../../session';
@@ -73,6 +74,7 @@ export default function MapScreen() {
             <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>Sign out</Text>
           </Pressable>
         </View>
+        <SyncBar />
       </View>
       <Pressable
         accessibilityRole="button"
