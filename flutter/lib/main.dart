@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'auth.dart';
 import 'db/database.dart';
 import 'firebase_options.dart'; // written by flutterfire configure (git-ignored)
 import 'providers.dart';
@@ -13,6 +14,7 @@ import 'screens/entrance_screen.dart';
 import 'screens/inbox_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/route_screen.dart';
+import 'screens/sign_in_screen.dart';
 import 'screens/survey_screen.dart';
 import 'store.dart';
 
@@ -88,17 +90,32 @@ final _router = GoRouter(
   ],
 );
 
-class FieldApp extends StatelessWidget {
+const _seed = Color(0xFFC2410C);
+final _light = ThemeData(colorSchemeSeed: _seed, brightness: Brightness.light);
+final _dark = ThemeData(colorSchemeSeed: _seed, brightness: Brightness.dark);
+
+/// The auth-state gate: no user, no app. Signing in or out rebuilds this.
+class FieldApp extends ConsumerWidget {
   const FieldApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    const seed = Color(0xFFC2410C);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider);
+    if (user.value == null) {
+      return MaterialApp(
+        title: 'Field app',
+        theme: _light,
+        darkTheme: _dark,
+        home: user.isLoading
+            ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+            : const SignInScreen(),
+      );
+    }
     return MaterialApp.router(
       title: 'Field app',
       routerConfig: _router,
-      theme: ThemeData(colorSchemeSeed: seed, brightness: Brightness.light),
-      darkTheme: ThemeData(colorSchemeSeed: seed, brightness: Brightness.dark),
+      theme: _light,
+      darkTheme: _dark,
       themeMode: ThemeMode.system, // follow the phone's setting
     );
   }
