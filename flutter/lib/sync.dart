@@ -1,12 +1,14 @@
 import 'dart:async';
+import 'dart:io' show File;
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'auth.dart';
 import 'contract/contract.dart';
+import 'db/database.dart';
 import 'providers.dart';
 import 'repositories.dart';
 
@@ -42,8 +44,29 @@ Future<void> pushSurveys(WidgetRef ref) async {
         await db.markSent(e.id, e.updatedAt, err.code);
       }
     }
+    // Step 11 (optional): the photos, when the project has Storage.
+    if (const bool.fromEnvironment('UPLOAD_PHOTOS')) await _pushPhotos(db, uid);
   } finally {
     _pushing = false;
+  }
+}
+
+/// Every photo not uploaded yet goes to photos/{uid}/{entranceId}/{photoId}.jpg.
+Future<void> _pushPhotos(AppDatabase db, String uid) async {
+  for (final p in await db.photosToUpload()) {
+    final file = FirebaseStorage.instance.ref('photos/$uid/${p.entranceId}/${p.id}.jpg');
+    final meta = SettableMetadata(contentType: 'image/jpeg');
+    try {
+      if (p.localUri.startsWith('data:')) {
+        // The web keeps the photo as a data: URI (week 3).
+        await file.putString(p.localUri, format: PutStringFormat.dataUrl, metadata: meta);
+      } else {
+        await file.putFile(File(p.localUri), meta);
+      }
+      await db.markPhoto(p.id, remoteUrl: await file.getDownloadURL());
+    } on FirebaseException catch (err) {
+      await db.markPhoto(p.id, error: err.code);
+    }
   }
 }
 

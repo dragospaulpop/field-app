@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 String messageFor(Object e) {
   final code = e is FirebaseAuthException ? e.code : '';
   return switch (code) {
-    'invalid-credential' => 'Wrong email or password.',
+    // The Auth emulator (step 11) still answers with the two older codes.
+    'invalid-credential' || 'user-not-found' || 'wrong-password' => 'Wrong email or password.',
     'invalid-email' => 'That is not an email address.',
     'email-already-in-use' => 'This email already has an account: sign in instead.',
     'weak-password' => 'The password needs at least 6 characters.',

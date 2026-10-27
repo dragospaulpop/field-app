@@ -170,6 +170,17 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
 
+  /// Step 11: the photos not uploaded yet, and what became of each.
+  Future<List<PhotoRow>> photosToUpload() =>
+      (select(photos)..where((p) => p.uploadState.isInValues([UploadState.pending, UploadState.failed]))).get();
+
+  Future<void> markPhoto(String id, {String? remoteUrl, String? error}) =>
+      (update(photos)..where((p) => p.id.equals(id))).write(PhotosCompanion(
+        uploadState: Value(error == null ? UploadState.uploaded : UploadState.failed),
+        remoteUrl: Value(remoteUrl),
+        lastError: Value(error),
+      ));
+
   /// The banner's count: what still waits to be sent, and the last refusal.
   Stream<({int pending, int failed, String? lastError})> watchOutbox() =>
       (select(entrances)
