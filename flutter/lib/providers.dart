@@ -20,6 +20,11 @@ final databaseProvider = Provider<AppDatabase>((ref) => throw UnimplementedError
 final pinsRepositoryProvider = Provider<PinsRepository>((ref) => FirebasePinsRepository());
 final surveysRepositoryProvider = Provider<SurveysRepository>((ref) => FirebaseSurveysRepository());
 
+/// Exercise 1: what the cloud holds for one entrance's survey, live.
+final cloudSurveyProvider = StreamProvider.family<CloudSurvey, String>(
+  (ref, id) => ref.watch(surveysRepositoryProvider).watchOne(id),
+);
+
 /// The contract's user id for the fixtures (routes, messages). Firebase's uid
 /// is not a UUID, so SQLite keeps this one; the survey sent carries the uid.
 final meProvider = Provider<String>((ref) => ref.watch(fixturesProvider).me);

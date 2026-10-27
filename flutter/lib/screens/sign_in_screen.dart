@@ -11,6 +11,13 @@ String messageFor(Object e) {
     'email-already-in-use' => 'This email already has an account: sign in instead.',
     'weak-password' => 'The password needs at least 6 characters.',
     'network-request-failed' => 'No connection: signing in needs the network.',
+    // Exercise 5: the rest of the codes a worker can meet.
+    'missing-password' => 'Type your password.',
+    'missing-email' => 'Type your email first.',
+    // On Android, FlutterFire refuses an empty email or password before Firebase sees it.
+    'channel-error' => 'Type your email and your password.',
+    'too-many-requests' => 'Too many tries. Wait a few minutes, or reset your password.',
+    'user-disabled' => 'This account is switched off. Ask the office.',
     _ => 'Could not sign in (${code.isEmpty ? e : code}).',
   };
 }
@@ -48,6 +55,18 @@ class _SignInScreenState extends State<SignInScreen> {
       setState(() => _error = messageFor(e));
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  // Exercise 5: a reset link by email. Firebase answers the same whether or not
+  // the account exists (so nobody can probe emails), and so do we.
+  Future<void> _reset() async {
+    setState(() => _error = null);
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: _email.text.trim());
+      setState(() => _error = 'If an account exists for this email, a reset link is on its way.');
+    } catch (e) {
+      setState(() => _error = messageFor(e));
     }
   }
 
@@ -92,6 +111,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 child: const Text('Create account'),
               ),
             ]),
+          TextButton(onPressed: _reset, child: const Text('Forgot your password?')),
         ]),
       ),
     );
