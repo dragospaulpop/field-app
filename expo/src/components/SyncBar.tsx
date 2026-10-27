@@ -1,8 +1,11 @@
+import { skipToken, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { pins } from '../cloud';
+import type { Entrance } from '../contract/contract';
 import { entrances as fixtureEntrances } from '../contract/fixtures';
 import { auth } from '../firebase';
+import { myPinsKey } from '../sync';
 import { useColors } from '../theme';
 
 /** The banner's sync line: what the cloud has, what waits to be sent. */
@@ -10,6 +13,8 @@ export function SyncBar() {
   const colors = useColors();
   const uid = auth.currentUser?.uid ?? '';
   const [seeded, setSeeded] = useState<string | null>(null);
+  // No queryFn: the listener fills this cache entry (setQueryData in sync.ts).
+  const cloud = useQuery<Entrance[]>({ queryKey: myPinsKey(uid), queryFn: skipToken });
 
   // Dev only: until the office side exists (week 7), the contract's fixtures
   // become my pins. __DEV__ is false in a release build: the button disappears.
@@ -21,7 +26,10 @@ export function SyncBar() {
 
   return (
     <View style={styles.row}>
-      {__DEV__ && (
+      <Text style={{ color: colors.muted, fontSize: 12 }}>
+        {cloud.data ? `cloud: ${cloud.data.length} pins, live` : 'cloud: connecting…'}
+      </Text>
+      {__DEV__ && cloud.data?.length === 0 && (
         <Pressable accessibilityRole="button" onPress={seed}>
           <Text style={[styles.link, { color: colors.primary }]}>Seed my pins</Text>
         </Pressable>
