@@ -13,6 +13,7 @@ import '../location.dart';
 import '../providers.dart';
 import '../session.dart';
 import 'status_chip.dart';
+import 'sync_bar.dart';
 
 // OpenStreetMap's public tiles, weeks 2–4. Week 5 swaps this one constant for
 // the course's own Bucharest tiles.
@@ -99,6 +100,7 @@ class MapScreen extends ConsumerWidget {
                         child: const Text('Sign out'),
                       ),
                     ]),
+                    const SyncBar(),
                   ]),
                 ),
               ),
