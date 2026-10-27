@@ -1,8 +1,10 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'db/database.dart';
+import 'firebase_options.dart'; // written by flutterfire configure (git-ignored)
 import 'providers.dart';
 import 'session.dart';
 
@@ -16,6 +18,8 @@ import 'store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Before anything that talks to Firebase: your project's options, per platform.
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final fixtures = await Fixtures.load();
   // The app's truth from now on: SQLite, seeded from the fixtures once.
   final db = AppDatabase();
