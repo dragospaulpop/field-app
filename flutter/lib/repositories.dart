@@ -1,11 +1,11 @@
 import 'contract/contract.dart';
 
 // What the app needs from "the cloud", and nothing about how. Screens and the
-// sync code use these interfaces; only firebase_repositories.dart knows
-// Firebase. Week 5 adds a Supabase implementation of the same two.
+// sync code use these interfaces; only supabase_repositories.dart knows
+// Supabase. Week 5 swapped week 4's Firebase implementation for it.
 
 abstract class PinsRepository {
-  /// All my pins now, and again after every change.
+  /// All my pins now (and again each time the stream is asked for anew).
   Stream<List<Entrance>> watchMine(String uid);
 
   /// Dev only: make these pins mine. Counts the ones that already belong to someone.
@@ -13,7 +13,7 @@ abstract class PinsRepository {
 }
 
 abstract class SurveysRepository {
-  /// Idempotent: sending the same survey twice leaves one document.
+  /// Idempotent: sending the same survey twice leaves one row as it was.
   Future<void> push(Map<String, Object?> survey);
 }
 

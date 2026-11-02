@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_map/flutter_map.dart';
@@ -8,10 +7,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:uuid/uuid.dart';
 
+import '../auth.dart';
 import '../contract/contract.dart';
 import '../location.dart';
 import '../providers.dart';
 import '../session.dart';
+import '../sync.dart';
 import 'status_chip.dart';
 import 'sync_bar.dart';
 
@@ -93,10 +94,10 @@ class MapScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(FirebaseAuth.instance.currentUser?.email ?? '',
+                      Text(ref.watch(authStateProvider).value?.email ?? '',
                           style: Theme.of(context).textTheme.bodySmall),
                       TextButton(
-                        onPressed: () => FirebaseAuth.instance.signOut(),
+                        onPressed: () => signOutIfSent(context, ref),
                         child: const Text('Sign out'),
                       ),
                     ]),

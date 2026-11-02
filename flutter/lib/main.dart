@@ -1,15 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth.dart';
 import 'db/database.dart';
-import 'firebase_options.dart'; // written by flutterfire configure (git-ignored)
 import 'providers.dart';
 import 'session.dart';
 
@@ -25,19 +20,15 @@ import 'sync.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Before anything that talks to Firebase: your project's options, per platform.
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // Step 11, no card: the Local Emulator Suite on your PC instead of Google's
-  // servers. flutter run --dart-define=USE_EMULATORS=true. The browser finds
-  // them on localhost; the Android emulator reaches your PC as 10.0.2.2; a
-  // phone needs your PC's LAN address (--dart-define=EMULATOR_HOST=…).
-  if (const bool.fromEnvironment('USE_EMULATORS')) {
-    const host = String.fromEnvironment('EMULATOR_HOST', defaultValue: '10.0.2.2');
-    final h = kIsWeb ? 'localhost' : host;
-    await FirebaseAuth.instance.useAuthEmulator(h, 9099);
-    FirebaseFirestore.instance.useFirestoreEmulator(h, 8080);
-    await FirebaseStorage.instance.useStorageEmulator(h, 9199);
+  // Before anything that talks to Supabase: your project's URL and publishable
+  // key, from supabase.json (git-ignored), given to the build with
+  // flutter run --dart-define-from-file=supabase.json.
+  const url = String.fromEnvironment('SUPABASE_URL');
+  const key = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+  if (url.isEmpty || key.isEmpty) {
+    throw StateError('No Supabase config: run with --dart-define-from-file=supabase.json');
   }
+  await Supabase.initialize(url: url, publishableKey: key);
   final fixtures = await Fixtures.load();
   // The app's truth: SQLite. The buildings come from the fixtures once; the
   // entrances, from the cloud (sync.dart).
