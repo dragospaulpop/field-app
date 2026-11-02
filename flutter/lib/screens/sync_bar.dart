@@ -31,7 +31,7 @@ class SyncBar extends ConsumerWidget {
         child: const Text('Sync now'),
       ),
       if (box?.lastError != null)
-        Text('last refusal: ${box!.lastError}',
+        Text('last problem: ${box!.lastError}',
             style: small?.copyWith(color: Theme.of(context).colorScheme.error)),
     ]);
   }

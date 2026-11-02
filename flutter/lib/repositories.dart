@@ -10,11 +10,16 @@ abstract class PinsRepository {
 
   /// Dev only: make these pins mine. Counts the ones that already belong to someone.
   Future<({int created, int refused})> seed(String uid, List<Entrance> pins);
+
+  /// One pin as the server has it now, or null if it is not mine (any more).
+  Future<Entrance?> pullOne(String id);
 }
 
 abstract class SurveysRepository {
   /// Idempotent: sending the same survey twice leaves one row as it was.
-  Future<void> push(Map<String, Object?> survey);
+  /// True: the server took it. False: nothing changed (a newer write won, or
+  /// the pin is not mine any more). A refusal throws.
+  Future<bool> push(Map<String, Object?> survey);
 }
 
 /// The surveyed fields of an entrance (the contract's survey form).

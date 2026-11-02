@@ -72,22 +72,25 @@ class SupabasePinsRepository implements PinsRepository {
   @override
   Future<({int created, int refused})> seed(String uid, List<Entrance> pins) async =>
       (created: 0, refused: 0);
+
+  @override
+  Future<Entrance?> pullOne(String id) async {
+    final row = await supabase.from('entrances').select().eq('id', id).maybeSingle();
+    return row == null ? null : entranceFromRow(row);
+  }
 }
 
 class SupabaseSurveysRepository implements SurveysRepository {
+  /// The server judges: upsert_survey writes the survey only if its updatedAt
+  /// is newer than the row's (last writer wins, per row), and answers true or
+  /// false. It runs as the caller, so RLS and the column grants still apply.
   @override
-  Future<void> push(Map<String, Object?> survey) async {
-    // An update of the row the office made, by the entrance's UUID: sending the
-    // same survey twice writes the same values twice (idempotent).
-    final changed = await supabase
-        .from('entrances')
-        .update({...surveyColumns(survey), 'updated_at': survey['updatedAt']})
-        .eq('id', survey['id']!)
-        .select('id'); // ask for the changed rows back
-    // Zero rows and no error: RLS hid the row (it is not mine any more). A refusal.
-    if (changed.isEmpty) {
-      throw const PostgrestException(
-          message: 'refused: this entrance is no longer assigned to you', code: 'not-mine');
-    }
+  Future<bool> push(Map<String, Object?> survey) async {
+    final applied = await supabase.rpc('upsert_survey', params: {
+      'p_entrance_id': survey['id'],
+      'p_fields': surveyColumns(survey), // the server ignores surveyed_by: the token says who
+      'p_client_updated_at': survey['updatedAt'], // the stored ISO-Z string, as it is in SQLite
+    });
+    return applied == true;
   }
 }

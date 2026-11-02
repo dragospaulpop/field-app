@@ -149,14 +149,15 @@ class AppDatabase extends _$AppDatabase {
             .go();
       });
 
-  /// The outbox: submitted surveys the cloud has not confirmed yet. A missed
-  /// building (week 3) waits: its building is not in the cloud before week 5.
+  /// The outbox: submitted surveys the cloud has not confirmed yet. A failed
+  /// one waits for the worker (Retry, or an edit). A missed building (week 3)
+  /// waits too: its building is not in the cloud.
   Future<List<Entrance>> outbox() async {
     final q = select(entrances).join([
       innerJoin(buildings, buildings.id.equalsExp(entrances.buildingId)),
     ])
       ..where(entrances.surveyStatus.equalsValue(SurveyStatus.submitted) &
-          entrances.syncState.isInValues([SyncState.pending, SyncState.failed]) &
+          entrances.syncState.equalsValue(SyncState.pending) &
           buildings.syncState.equalsValue(SyncState.synced));
     return [for (final r in await q.get()) Entrance.fromJson(r.readTable(entrances).toJson())];
   }
@@ -169,6 +170,43 @@ class AppDatabase extends _$AppDatabase {
           lastError: Value(error),
         ),
       );
+
+  /// No answer, or an error that may pass: still pending, and why.
+  Future<void> markWaiting(String id, String updatedAt, String why) =>
+      (update(entrances)..where((e) => e.id.equals(id) & e.updatedAt.equals(updatedAt)))
+          .write(EntrancesCompanion(lastError: Value(why)));
+
+  /// The server kept a newer version: it replaces the worker's on the phone,
+  /// with a sentence that says so. The phone's own openedAt stays.
+  Future<void> takeServerVersion(Entrance pin, String note) => into(entrances).insertOnConflictUpdate(
+        EntranceRow.fromJson({...pin.toJson(), 'syncState': 'synced', 'lastError': note})
+            .toCompanion(false)
+            .copyWith(openedAt: const Value.absent()),
+      );
+
+  /// Retry: a failed survey goes back to the outbox.
+  Future<void> retrySurvey(String id) =>
+      (update(entrances)..where((e) => e.id.equals(id) & e.syncState.equalsValue(SyncState.failed)))
+          .write(const EntrancesCompanion(syncState: Value(SyncState.pending), lastError: Value(null)));
+
+  /// One entrance's sync state, for its chip.
+  Stream<({SyncState state, String? lastError})?> watchSync(String id) =>
+      (select(entrances)..where((e) => e.id.equals(id)))
+          .watchSingleOrNull()
+          .map((r) => r == null ? null : (state: r.syncState, lastError: r.lastError));
+
+  /// Dev only (the rules card): a survey the form would never let through.
+  Future<void> forceInvalidSurvey(String id) {
+    final now = DateTime.now().toUtc().toIso8601String();
+    return (update(entrances)..where((e) => e.id.equals(id))).write(EntrancesCompanion(
+      stories: const Value(99), // the database allows 1..60
+      surveyStatus: const Value(SurveyStatus.submitted),
+      updatedAt: Value(now),
+      surveyedAt: Value(now),
+      syncState: const Value(SyncState.pending),
+      lastError: const Value(null),
+    ));
+  }
 
   /// Step 11: the photos not uploaded yet, and what became of each.
   Future<List<PhotoRow>> photosToUpload() =>
