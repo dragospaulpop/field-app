@@ -2,6 +2,7 @@ import { skipToken, useQuery } from '@tanstack/react-query';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { currentUser } from '../auth';
 import type { Entrance } from '../contract/contract';
+import { useQueue } from '../photoQueue';
 import { retryFailed, useOutbox } from '../store';
 import { myPinsKey, pushSurveys } from '../sync';
 import { useColors } from '../theme';
@@ -12,6 +13,7 @@ export function SyncBar() {
   const uid = currentUser()?.id ?? '';
   // No queryFn: the pull fills this cache entry (setQueryData in sync.ts).
   const box = useOutbox();
+  const queue = useQueue(); // photos not uploaded yet
   const cloud = useQuery<Entrance[]>({ queryKey: myPinsKey(uid), queryFn: skipToken });
 
   return (
@@ -34,6 +36,10 @@ export function SyncBar() {
           <Text style={[styles.link, { color: colors.primary }]}>Retry all</Text>
         </Pressable>
       )}
+      <Text style={{ color: colors.muted, fontSize: 12 }}>
+        photos: {queue.filter((q) => q.state !== 'failed').length} waiting ·{' '}
+        {queue.filter((q) => q.state === 'failed').length} failed
+      </Text>
       {box.lastError && <Text style={styles.error}>last refusal: {box.lastError}</Text>}
     </View>
   );

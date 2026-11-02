@@ -3,6 +3,7 @@ import { addNetworkStateListener } from 'expo-network';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { pins, surveys } from './cloud';
+import { drainQueue, resetUploading, waitingPhotos } from './photoQueue';
 import { type Entrance, EntranceSurvey } from './contract/contract';
 import { signOut } from './auth';
 import { LOST, markSent, outbox, savePins, unsentSurveys } from './store';
@@ -32,13 +33,22 @@ export function useSync(uid: string) {
 
   // The push, at three moments: now, when the app comes back to the
   // foreground, and when the network comes back. (And on "Sync now".)
+  // Step 4: the photo queue at the same moments (after a restart, uploads left
+  // half-done start again from zero).
   useEffect(() => {
     pushSurveys(uid);
+    resetUploading(uid).then(drainQueue);
     const foreground = AppState.addEventListener('change', (state) => {
-      if (state === 'active') pushSurveys(uid);
+      if (state === 'active') {
+        pushSurveys(uid);
+        drainQueue();
+      }
     });
     const network = addNetworkStateListener((state) => {
-      if (state.isConnected) pushSurveys(uid);
+      if (state.isConnected) {
+        pushSurveys(uid);
+        drainQueue();
+      }
     });
     return () => {
       foreground.remove();
@@ -107,6 +117,8 @@ export async function pushSurveys(uid: string) {
 export async function safeSignOut(): Promise<string | null> {
   const n = await unsentSurveys();
   if (n > 0) return `${n} ${n === 1 ? 'survey' : 'surveys'} not sent yet: Sync now first.`;
+  const p = await waitingPhotos(); // step 4: the photo queue is the phone's too
+  if (p > 0) return `${p} ${p === 1 ? 'photo' : 'photos'} not uploaded yet: wait for them, or Retry.`;
   await signOut();
   return null;
 }

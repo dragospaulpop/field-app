@@ -4,10 +4,12 @@ import * as Crypto from 'expo-crypto';
 import { Directory, File, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
+import { currentUser } from './auth';
 import { db } from './db/db';
 import { type PhotoRow, photos } from './db/schema';
 import { locate } from './location';
 import { ensureCamera } from './permissions';
+import { drainQueue, enqueue } from './photoQueue';
 import { useField } from './store';
 
 /** What the photo file says about itself (EXIF), as far as we read it tonight. */
@@ -64,7 +66,7 @@ async function save(
     lat: where?.lat ?? null,
     lng: where?.lng ?? null,
     heading,
-    uploadState: 'pending', // week 5 uploads it
+    uploadState: 'pending', // the queue uploads it (week 5, step 4)
     reviewStatus: 'pending',
     reviewNote: null,
     reviewedBy: null,
@@ -74,6 +76,9 @@ async function save(
     localUri: keep(asset.uri, id),
   };
   await db.insert(photos).values(row);
+  // Into the queue at once, with its remote path; then try to send (if the policy allows).
+  await enqueue(id, entranceId, row.localUri, currentUser()?.id ?? 'signed-out');
+  drainQueue();
   return readExif(asset.exif);
 }
 
