@@ -88,6 +88,19 @@ export async function markSent(id: string, updatedAt: string, error: string | nu
     .where(and(eq(entrances.id, id), eq(entrances.updatedAt, updatedAt)));
 }
 
+/**
+ * Surveys this phone still owes the cloud (waiting or refused). Signing out
+ * with any of them would hand them to the next worker on this phone: their
+ * push would fail as not theirs, and the pull would delete the rows.
+ */
+export async function unsentSurveys(): Promise<number> {
+  const rows = await db
+    .select({ id: entrances.id })
+    .from(entrances)
+    .where(and(eq(entrances.surveyStatus, 'submitted'), inArray(entrances.syncState, ['pending', 'failed'])));
+  return rows.length;
+}
+
 /** The banner's count: what still waits to be sent, and the last refusal. */
 export function useOutbox() {
   const { data } = useLiveQuery(
