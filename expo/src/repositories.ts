@@ -1,8 +1,8 @@
 import type { Entrance, EntranceSurvey, SurveyStatus } from './contract/contract';
 
 // What the app needs from "the cloud", and nothing about how. Screens and the
-// sync code use these interfaces; only firebaseRepositories.ts knows Firebase.
-// Week 5 adds a Supabase implementation of the same two interfaces.
+// sync code use these interfaces; only supabaseRepositories.ts knows Supabase
+// (until week 5 it was firebaseRepositories.ts).
 
 /** A survey as it travels: the surveyed fields, who, when, and which entrance. */
 export type SurveyDoc = EntranceSurvey & {
@@ -16,22 +16,18 @@ export type SurveyDoc = EntranceSurvey & {
 export interface PinsRepository {
   /** Calls onPins with all my pins now, and again after every change. Returns "stop". */
   watchMine(uid: string, onPins: (pins: Entrance[]) => void, onError: (e: Error) => void): () => void;
-  /** Dev only: make these pins mine. Counts the ones that already belong to someone. */
-  seed(uid: string, pins: Entrance[]): Promise<{ created: number; refused: number }>;
+  /** Ask the cloud again now (Sync now, the app back in front). A live listener may ignore it. */
+  refresh(): void;
 }
 
-/** What the cloud holds for one survey (course 2, exercise 1). */
-export type CloudSurvey =
-  | { state: 'none' }
-  | { state: 'denied' }
-  | { state: 'pending' } // exercise 4: written on this phone, the server has not confirmed it
-  | { state: 'sent'; updatedAt: string };
+/** What the cloud did with a survey (step 3). */
+export type PushOutcome =
+  | { kind: 'applied' } // the server took it
+  | { kind: 'lost' } // not applied: a newer (or the same) version is there, or the pin is not mine
+  | { kind: 'refused'; message: string } // an error a retry cannot fix
+  | { kind: 'retry'; message: string }; // no answer, or an error that may pass
 
 export interface SurveysRepository {
-  /** Idempotent: sending the same survey twice leaves one document. */
-  push(survey: SurveyDoc): Promise<void>;
-  /** Exercise 2: my newest sent survey (a query with where + orderBy), live. */
-  watchLastSent(uid: string, onChange: (last: SurveyDoc | null) => void, onError: (e: Error) => void): () => void;
-  /** Exercise 1: follow one survey document, live. Returns "stop". */
-  watchOne(id: string, onChange: (s: CloudSurvey) => void): () => void;
+  /** Idempotent: sending the same survey twice changes nothing the second time. Never throws. */
+  push(survey: SurveyDoc): Promise<PushOutcome>;
 }

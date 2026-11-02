@@ -1,37 +1,29 @@
-import { FirebaseError } from 'firebase/app';
-import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
+import { isAuthError, isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { auth } from '../firebase';
+import { signIn, signUp } from '../auth';
 import { useColors } from '../theme';
 
-/** A Firebase error code, said the way a worker understands it. */
+/** A Supabase Auth error, said the way a worker understands it (by its code, never its text). */
 function messageFor(e: unknown): string {
-  const code = e instanceof FirebaseError ? e.code : '';
-  switch (code) {
-    case 'auth/invalid-credential':
-    case 'auth/user-not-found': // the Auth emulator (step 11) still answers with these two
-    case 'auth/wrong-password':
+  // No answer at all (no network, a wrong URL in .env): a "retryable fetch" error.
+  if (isAuthRetryableFetchError(e)) return 'No connection: signing in needs the network.';
+  if (!isAuthError(e)) return `Could not sign in (${String(e)}).`;
+  switch (e.code) {
+    case 'invalid_credentials':
       return 'Wrong email or password.';
-    case 'auth/invalid-email':
+    case 'validation_failed':
+    case 'email_address_invalid':
       return 'That is not an email address.';
-    case 'auth/email-already-in-use':
+    case 'user_already_exists':
+    case 'email_exists':
       return 'This email already has an account: sign in instead.';
-    case 'auth/weak-password':
+    case 'weak_password':
       return 'The password needs at least 6 characters.';
-    case 'auth/network-request-failed':
-      return 'No connection: signing in needs the network.';
-    // Exercise 5: the rest of the codes a worker can meet.
-    case 'auth/missing-password':
-      return 'Type your password.';
-    case 'auth/missing-email':
-      return 'Type your email first.';
-    case 'auth/too-many-requests':
-      return 'Too many tries. Wait a few minutes, or reset your password.';
-    case 'auth/user-disabled':
-      return 'This account is switched off. Ask the office.';
+    case 'email_not_confirmed':
+      return 'Confirm your email first: open the link Supabase sent you.';
     default:
-      return `Could not sign in (${code || String(e)}).`;
+      return `Could not sign in (${e.code ?? e.message}).`;
   }
 }
 
@@ -42,28 +34,19 @@ export function SignIn() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // No navigation here: onAuthStateChanged in the root layout swaps the screen.
-  const run = async (how: typeof signInWithEmailAndPassword) => {
+  // No navigation here: onAuthStateChange in the root layout swaps the screen.
+  const run = async (how: 'in' | 'up') => {
     setBusy(true);
     setError(null);
     try {
-      await how(auth, email.trim(), password);
+      if (how === 'in') await signIn(email.trim(), password);
+      else if ((await signUp(email.trim(), password)).needsConfirmation) {
+        setError('Account made: open the link in your email, then sign in.');
+      }
     } catch (e) {
       setError(messageFor(e));
     } finally {
       setBusy(false);
-    }
-  };
-
-  // Exercise 5: a reset link by email. Firebase answers the same whether or not
-  // the account exists (so nobody can probe emails), and so do we.
-  const reset = async () => {
-    setError(null);
-    try {
-      await sendPasswordResetEmail(auth, email.trim());
-      setError('If an account exists for this email, a reset link is on its way.');
-    } catch (e) {
-      setError(messageFor(e));
     }
   };
 
@@ -89,7 +72,7 @@ export function SignIn() {
         autoComplete="password"
         value={password}
         onChangeText={setPassword}
-        onSubmitEditing={() => run(signInWithEmailAndPassword)}
+        onSubmitEditing={() => run('in')}
       />
       {error && <Text style={styles.error}>{error}</Text>}
       {busy ? (
@@ -99,22 +82,19 @@ export function SignIn() {
           <Pressable
             accessibilityRole="button"
             style={[styles.button, { backgroundColor: colors.primary }]}
-            onPress={() => run(signInWithEmailAndPassword)}
+            onPress={() => run('in')}
           >
             <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Sign in</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
             style={[styles.button, { borderColor: colors.primary, borderWidth: 1 }]}
-            onPress={() => run(createUserWithEmailAndPassword)}
+            onPress={() => run('up')}
           >
             <Text style={{ color: colors.primary, fontWeight: '700' }}>Create account</Text>
           </Pressable>
         </View>
       )}
-      <Pressable accessibilityRole="button" onPress={reset}>
-        <Text style={{ color: colors.primary }}>Forgot your password?</Text>
-      </Pressable>
     </View>
   );
 }

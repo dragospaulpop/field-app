@@ -1,8 +1,8 @@
-import { and, eq, inArray, lt, notInArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, lt, notInArray, or } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { create } from 'zustand';
 import * as Crypto from 'expo-crypto';
-import type { Building, Entrance, EntranceSurvey } from './contract/contract';
+import type { Building, Entrance, EntranceSurvey, SyncState } from './contract/contract';
 import { ME } from './contract/fixtures';
 import { db } from './db/db';
 import { buildings, entrances } from './db/schema';
@@ -12,11 +12,11 @@ import { buildings, entrances } from './db/schema';
 // changes a table, every screen reading that table re-renders by itself.
 // ---------------------------------------------------------------------------
 
-export function useEntrances(): Entrance[] {
+export type EntranceRow = typeof entrances.$inferSelect;
+
+export function useEntrances(): EntranceRow[] {
   return useLiveQuery(db.select().from(entrances)).data;
 }
-
-export type EntranceRow = typeof entrances.$inferSelect;
 
 /** undefined while SQLite answers the first time, null when there is no such row. */
 export function useEntrance(id: string): EntranceRow | null | undefined {
@@ -36,14 +36,15 @@ export function useBuilding(id: string): Building | undefined {
  * updates its row only when it is newer (updatedAt) than the row, and never
  * over an unsent survey (syncState pending or failed): the survey the worker
  * just sent is newer than the office's pin, so it stays on screen. A synced
- * row that is no longer in the list was taken away: deleted.
+ * row that is no longer in the list was taken away: deleted. The update keeps
+ * the row's lastError: the sentence of a lost survey (step 3) stays on screen.
  */
 export async function savePins(pins: Entrance[]) {
   for (const pin of pins) {
-    const row = { ...pin, syncState: 'synced' as const, lastError: null };
+    const row = { ...pin, syncState: 'synced' as const };
     await db
       .insert(entrances)
-      .values(row)
+      .values({ ...row, lastError: null })
       .onConflictDoUpdate({
         target: entrances.id,
         set: row,
@@ -62,8 +63,9 @@ export async function savePins(pins: Entrance[]) {
 }
 
 /**
- * The outbox: submitted surveys the cloud has not confirmed yet. A missed
- * building (week 3) waits: its building is not in the cloud before week 5.
+ * The outbox: submitted surveys waiting to be sent. A failed one waits for
+ * Retry (step 3): sending it again unchanged would fail again. A missed
+ * building (week 3) waits: a phone cannot add a building to the cloud.
  */
 export async function outbox() {
   const rows = await db
@@ -73,33 +75,63 @@ export async function outbox() {
     .where(
       and(
         eq(entrances.surveyStatus, 'submitted'),
-        inArray(entrances.syncState, ['pending', 'failed']),
+        eq(entrances.syncState, 'pending'),
         eq(buildings.syncState, 'synced'),
       ),
     );
   return rows.map((r) => r.entrance);
 }
 
-/** After a push: synced, unless the worker changed the survey meanwhile. */
-export async function markSent(id: string, updatedAt: string, error: string | null) {
+/**
+ * After a push: the row's new state and the sentence the worker reads (null:
+ * nothing to say), unless the worker changed the survey meanwhile (then it
+ * stays pending: the new version still has to go).
+ */
+export async function markSent(id: string, updatedAt: string, syncState: SyncState, lastError: string | null) {
   await db
     .update(entrances)
-    .set(error ? { syncState: 'failed', lastError: error } : { syncState: 'synced', lastError: null })
+    .set({ syncState, lastError })
     .where(and(eq(entrances.id, id), eq(entrances.updatedAt, updatedAt)));
 }
 
-/** The banner's count: what still waits to be sent, and the last refusal. */
+/**
+ * Surveys this phone still owes the cloud (waiting or refused). Signing out
+ * with any of them would hand them to the next worker on this phone: their
+ * push would fail as not theirs, and the pull would delete the rows.
+ */
+export async function unsentSurveys(): Promise<number> {
+  const rows = await db
+    .select({ id: entrances.id })
+    .from(entrances)
+    .where(and(eq(entrances.surveyStatus, 'submitted'), inArray(entrances.syncState, ['pending', 'failed'])));
+  return rows.length;
+}
+
+/** Retry (one entrance, or every failed one): back to pending, for the next push. */
+export async function retryFailed(id?: string) {
+  await db
+    .update(entrances)
+    .set({ syncState: 'pending', lastError: null })
+    .where(and(eq(entrances.syncState, 'failed'), id ? eq(entrances.id, id) : undefined));
+}
+
+/** What a worker reads when the server kept another version (an older write, ignored). */
+export const LOST =
+  'Not applied: the server already has this survey or a newer edit of it. You see the server’s version.';
+
+/** The banner's counts: waiting to be sent, refused, ignored (lost), and the last refusal. */
 export function useOutbox() {
   const { data } = useLiveQuery(
     db
       .select({ syncState: entrances.syncState, lastError: entrances.lastError })
       .from(entrances)
-      .where(inArray(entrances.syncState, ['pending', 'failed'])),
+      .where(or(inArray(entrances.syncState, ['pending', 'failed']), isNotNull(entrances.lastError))),
   );
   return {
     pending: data.filter((r) => r.syncState === 'pending').length,
     failed: data.filter((r) => r.syncState === 'failed').length,
-    lastError: data.find((r) => r.lastError)?.lastError ?? null,
+    lost: data.filter((r) => r.syncState === 'synced' && r.lastError === LOST).length,
+    lastError: data.find((r) => r.syncState === 'failed')?.lastError ?? null,
   };
 }
 

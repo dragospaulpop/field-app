@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
-import { FlatList, Pressable, StyleSheet, Text } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useEntrances } from '../store';
 import { useColors } from '../theme';
 import { StatusChip } from './StatusChip';
+import { SyncChip } from './SyncChip';
 
 // react-native-maps has no web implementation. Metro picks this file instead
 // of EntranceMap.tsx when it bundles for the web: the same pins, as a list.
@@ -28,7 +29,10 @@ export function EntranceMap() {
           <Text style={[styles.title, { color: colors.text }]}>
             {e.street} {e.number}, {e.entranceName}
           </Text>
-          <StatusChip status={e.surveyStatus} />
+          <View style={styles.chips}>
+            <StatusChip status={e.surveyStatus} />
+            <SyncChip state={e.syncState} />
+          </View>
         </Pressable>
       )}
     />
@@ -49,4 +53,5 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: { flexShrink: 1, fontSize: 16 },
+  chips: { alignItems: 'flex-end', gap: 4 },
 });
