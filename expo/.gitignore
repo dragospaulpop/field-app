@@ -40,5 +40,5 @@ yarn-error.*
 /ios
 /android
 
-# Your Firebase project's config (step 3): yours, never committed
+# Your Supabase project's URL and key (week 5, step 1): yours, never committed
 .env
