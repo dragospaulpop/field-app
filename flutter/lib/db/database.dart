@@ -79,7 +79,29 @@ class Photos extends Table with RowColumns, LocalColumns {
   TextColumn get localUri => text()();
 }
 
-@DriftDatabase(tables: [Buildings, Entrances, Photos])
+/// Step 4: the photo queue's four states. Only the queue worker moves a row.
+enum QueueState { pending, uploading, synced, failed }
+
+/// Step 4: one row per photo waiting to reach Storage, and everything the
+/// worker must remember across a restart: tries so far, when it may try
+/// again, why the last try failed. Local only: the server has no such table.
+@DataClassName('QueueRow')
+class PhotoQueue extends Table {
+  TextColumn get id => text()(); // the photo's id (Photos.id)
+  TextColumn get entranceId => text()();
+  TextColumn get localUri => text()(); // the file in the app's folder (web: a data: URI)
+  TextColumn get remotePath => text()(); // <user id>/<entrance id>/<photo id>.jpg, fixed at queue time
+  TextColumn get state => textEnum<QueueState>().withDefault(const Constant('pending'))();
+  IntColumn get attempts => integer().withDefault(const Constant(0))();
+  IntColumn get nextAttemptAt => integer().withDefault(const Constant(0))(); // ms since 1970
+  TextColumn get lastError => text().nullable()();
+  IntColumn get createdAt => integer()(); // ms since 1970: the order of the queue
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Buildings, Entrances, Photos, PhotoQueue])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(executor ??
@@ -94,7 +116,7 @@ class AppDatabase extends _$AppDatabase {
             ));
 
   @override
-  int get schemaVersion => 2; // exercise 1: version 2 adds entrances.openedAt
+  int get schemaVersion => 3; // 2: entrances.openedAt (week 4); 3: photo_queue (week 5)
 
   @override
   MigrationStrategy get migration =>
@@ -103,6 +125,8 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           // A phone that has version 1 gets the new column, keeping its rows.
           if (from < 2) await m.addColumn(entrances, entrances.openedAt);
+          // A phone on version 2 gets the new, empty table; nothing else moves.
+          if (from < 3) await m.createTable(photoQueue);
         },
       );
 
@@ -208,16 +232,59 @@ class AppDatabase extends _$AppDatabase {
     ));
   }
 
-  /// Step 11: the photos not uploaded yet, and what became of each.
-  Future<List<PhotoRow>> photosToUpload() =>
-      (select(photos)..where((p) => p.uploadState.isInValues([UploadState.pending, UploadState.failed]))).get();
-
+  /// What became of a photo's upload (the contract's uploadState; the queue says how).
   Future<void> markPhoto(String id, {String? remoteUrl, String? error}) =>
       (update(photos)..where((p) => p.id.equals(id))).write(PhotosCompanion(
         uploadState: Value(error == null ? UploadState.uploaded : UploadState.failed),
         remoteUrl: Value(remoteUrl),
         lastError: Value(error),
       ));
+
+  // ---- Step 4: the photo queue ----
+
+  /// The next batch: pending rows whose wait is over, oldest first.
+  Future<List<QueueRow>> nextBatch(int nowMs, int size) => (select(photoQueue)
+        ..where((q) => q.state.equalsValue(QueueState.pending) & q.nextAttemptAt.isSmallerOrEqualValue(nowMs))
+        ..orderBy([(q) => OrderingTerm.asc(q.createdAt)])
+        ..limit(size))
+      .get();
+
+  Future<void> setQueue(String id, QueueState state,
+          {int? attempts, int? nextAttemptAt, Value<String?> lastError = const Value.absent()}) =>
+      (update(photoQueue)..where((q) => q.id.equals(id))).write(PhotoQueueCompanion(
+        state: Value(state),
+        attempts: Value.absentIfNull(attempts),
+        nextAttemptAt: Value.absentIfNull(nextAttemptAt),
+        lastError: lastError,
+      ));
+
+  /// When the earliest pending row may be tried again (null: none waits).
+  Future<int?> nextAttemptAt() {
+    final next = photoQueue.nextAttemptAt.min();
+    return (selectOnly(photoQueue)
+          ..addColumns([next])
+          ..where(photoQueue.state.equalsValue(QueueState.pending)))
+        .map((r) => r.read(next))
+        .getSingle();
+  }
+
+  /// At start: a row left 'uploading' was cut off when the app died. The path
+  /// is fixed and the upload overwrites, so sending it again is harmless.
+  Future<int> resumeUploading() => (update(photoQueue)..where((q) => q.state.equalsValue(QueueState.uploading)))
+      .write(const PhotoQueueCompanion(state: Value(QueueState.pending)));
+
+  /// Retry: a failed photo starts over, with its tries reset.
+  Future<void> retryPhotos() => (update(photoQueue)..where((q) => q.state.equalsValue(QueueState.failed))).write(
+      const PhotoQueueCompanion(state: Value(QueueState.pending), attempts: Value(0), nextAttemptAt: Value(0)));
+
+  /// The banner's photo line: how many rows are in each state, and the last problem.
+  Stream<({Map<QueueState, int> counts, String? lastError})> watchQueue() =>
+      select(photoQueue).watch().map((rows) => (
+            counts: {for (final s in QueueState.values) s: rows.where((r) => r.state == s).length},
+            lastError: rows.where((r) => r.state != QueueState.synced).map((r) => r.lastError).nonNulls.firstOrNull,
+          ));
+
+  Future<PhotoRow> photo(String id) => (select(photos)..where((p) => p.id.equals(id))).getSingle();
 
   /// The banner's count: what still waits to be sent, and the last refusal.
   Stream<({int pending, int failed, String? lastError})> watchOutbox() =>

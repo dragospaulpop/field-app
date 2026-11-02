@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../db/database.dart' show QueueState;
+import '../photo_queue.dart';
+import '../providers.dart';
 import '../sync.dart';
 
 /// The banner's sync line: what the cloud has, what waits to be sent.
@@ -27,12 +30,39 @@ class SyncBar extends ConsumerWidget {
         onPressed: () {
           pushSurveys(ref);
           pullPins(ref);
+          ref.read(photoQueueProvider).drain();
         },
         child: const Text('Sync now'),
       ),
       if (box?.lastError != null)
         Text('last problem: ${box!.lastError}',
             style: small?.copyWith(color: Theme.of(context).colorScheme.error)),
+      if (ref.watch(queueProvider).value case (:final counts, :final lastError)) ...[
+        Text(
+          'photos: ${counts[QueueState.pending]} waiting · ${counts[QueueState.uploading]} sending · '
+          '${counts[QueueState.synced]} sent · ${counts[QueueState.failed]} failed',
+          style: small,
+        ),
+        if (lastError != null) Text('last photo problem: $lastError', style: small),
+      ],
+      if ((ref.watch(queueProvider).value?.counts[QueueState.failed] ?? 0) > 0)
+        TextButton(
+          onPressed: () async {
+            await ref.read(databaseProvider).retryPhotos();
+            ref.read(photoQueueProvider).drain();
+          },
+          child: const Text('Retry photos'),
+        ),
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        Switch(
+          value: ref.watch(allowCellularProvider),
+          onChanged: (on) {
+            ref.read(allowCellularProvider.notifier).set(on);
+            ref.read(photoQueueProvider).drain();
+          },
+        ),
+        Text('Photos on mobile data', style: small),
+      ]),
     ]);
   }
 }

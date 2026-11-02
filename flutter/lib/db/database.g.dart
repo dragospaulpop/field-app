@@ -2901,12 +2901,584 @@ class PhotosCompanion extends UpdateCompanion<PhotoRow> {
   }
 }
 
+class $PhotoQueueTable extends PhotoQueue
+    with TableInfo<$PhotoQueueTable, QueueRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PhotoQueueTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entranceIdMeta = const VerificationMeta(
+    'entranceId',
+  );
+  @override
+  late final GeneratedColumn<String> entranceId = GeneratedColumn<String>(
+    'entrance_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localUriMeta = const VerificationMeta(
+    'localUri',
+  );
+  @override
+  late final GeneratedColumn<String> localUri = GeneratedColumn<String>(
+    'local_uri',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _remotePathMeta = const VerificationMeta(
+    'remotePath',
+  );
+  @override
+  late final GeneratedColumn<String> remotePath = GeneratedColumn<String>(
+    'remote_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<QueueState, String> state =
+      GeneratedColumn<String>(
+        'state',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('pending'),
+      ).withConverter<QueueState>($PhotoQueueTable.$converterstate);
+  static const VerificationMeta _attemptsMeta = const VerificationMeta(
+    'attempts',
+  );
+  @override
+  late final GeneratedColumn<int> attempts = GeneratedColumn<int>(
+    'attempts',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _nextAttemptAtMeta = const VerificationMeta(
+    'nextAttemptAt',
+  );
+  @override
+  late final GeneratedColumn<int> nextAttemptAt = GeneratedColumn<int>(
+    'next_attempt_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    entranceId,
+    localUri,
+    remotePath,
+    state,
+    attempts,
+    nextAttemptAt,
+    lastError,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'photo_queue';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<QueueRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('entrance_id')) {
+      context.handle(
+        _entranceIdMeta,
+        entranceId.isAcceptableOrUnknown(data['entrance_id']!, _entranceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entranceIdMeta);
+    }
+    if (data.containsKey('local_uri')) {
+      context.handle(
+        _localUriMeta,
+        localUri.isAcceptableOrUnknown(data['local_uri']!, _localUriMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localUriMeta);
+    }
+    if (data.containsKey('remote_path')) {
+      context.handle(
+        _remotePathMeta,
+        remotePath.isAcceptableOrUnknown(data['remote_path']!, _remotePathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_remotePathMeta);
+    }
+    if (data.containsKey('attempts')) {
+      context.handle(
+        _attemptsMeta,
+        attempts.isAcceptableOrUnknown(data['attempts']!, _attemptsMeta),
+      );
+    }
+    if (data.containsKey('next_attempt_at')) {
+      context.handle(
+        _nextAttemptAtMeta,
+        nextAttemptAt.isAcceptableOrUnknown(
+          data['next_attempt_at']!,
+          _nextAttemptAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  QueueRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return QueueRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      entranceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entrance_id'],
+      )!,
+      localUri: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_uri'],
+      )!,
+      remotePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_path'],
+      )!,
+      state: $PhotoQueueTable.$converterstate.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}state'],
+        )!,
+      ),
+      attempts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}attempts'],
+      )!,
+      nextAttemptAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}next_attempt_at'],
+      )!,
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PhotoQueueTable createAlias(String alias) {
+    return $PhotoQueueTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<QueueState, String, String> $converterstate =
+      const EnumNameConverter<QueueState>(QueueState.values);
+}
+
+class QueueRow extends DataClass implements Insertable<QueueRow> {
+  final String id;
+  final String entranceId;
+  final String localUri;
+  final String remotePath;
+  final QueueState state;
+  final int attempts;
+  final int nextAttemptAt;
+  final String? lastError;
+  final int createdAt;
+  const QueueRow({
+    required this.id,
+    required this.entranceId,
+    required this.localUri,
+    required this.remotePath,
+    required this.state,
+    required this.attempts,
+    required this.nextAttemptAt,
+    this.lastError,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['entrance_id'] = Variable<String>(entranceId);
+    map['local_uri'] = Variable<String>(localUri);
+    map['remote_path'] = Variable<String>(remotePath);
+    {
+      map['state'] = Variable<String>(
+        $PhotoQueueTable.$converterstate.toSql(state),
+      );
+    }
+    map['attempts'] = Variable<int>(attempts);
+    map['next_attempt_at'] = Variable<int>(nextAttemptAt);
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
+    }
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  PhotoQueueCompanion toCompanion(bool nullToAbsent) {
+    return PhotoQueueCompanion(
+      id: Value(id),
+      entranceId: Value(entranceId),
+      localUri: Value(localUri),
+      remotePath: Value(remotePath),
+      state: Value(state),
+      attempts: Value(attempts),
+      nextAttemptAt: Value(nextAttemptAt),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory QueueRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return QueueRow(
+      id: serializer.fromJson<String>(json['id']),
+      entranceId: serializer.fromJson<String>(json['entranceId']),
+      localUri: serializer.fromJson<String>(json['localUri']),
+      remotePath: serializer.fromJson<String>(json['remotePath']),
+      state: $PhotoQueueTable.$converterstate.fromJson(
+        serializer.fromJson<String>(json['state']),
+      ),
+      attempts: serializer.fromJson<int>(json['attempts']),
+      nextAttemptAt: serializer.fromJson<int>(json['nextAttemptAt']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'entranceId': serializer.toJson<String>(entranceId),
+      'localUri': serializer.toJson<String>(localUri),
+      'remotePath': serializer.toJson<String>(remotePath),
+      'state': serializer.toJson<String>(
+        $PhotoQueueTable.$converterstate.toJson(state),
+      ),
+      'attempts': serializer.toJson<int>(attempts),
+      'nextAttemptAt': serializer.toJson<int>(nextAttemptAt),
+      'lastError': serializer.toJson<String?>(lastError),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  QueueRow copyWith({
+    String? id,
+    String? entranceId,
+    String? localUri,
+    String? remotePath,
+    QueueState? state,
+    int? attempts,
+    int? nextAttemptAt,
+    Value<String?> lastError = const Value.absent(),
+    int? createdAt,
+  }) => QueueRow(
+    id: id ?? this.id,
+    entranceId: entranceId ?? this.entranceId,
+    localUri: localUri ?? this.localUri,
+    remotePath: remotePath ?? this.remotePath,
+    state: state ?? this.state,
+    attempts: attempts ?? this.attempts,
+    nextAttemptAt: nextAttemptAt ?? this.nextAttemptAt,
+    lastError: lastError.present ? lastError.value : this.lastError,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  QueueRow copyWithCompanion(PhotoQueueCompanion data) {
+    return QueueRow(
+      id: data.id.present ? data.id.value : this.id,
+      entranceId: data.entranceId.present
+          ? data.entranceId.value
+          : this.entranceId,
+      localUri: data.localUri.present ? data.localUri.value : this.localUri,
+      remotePath: data.remotePath.present
+          ? data.remotePath.value
+          : this.remotePath,
+      state: data.state.present ? data.state.value : this.state,
+      attempts: data.attempts.present ? data.attempts.value : this.attempts,
+      nextAttemptAt: data.nextAttemptAt.present
+          ? data.nextAttemptAt.value
+          : this.nextAttemptAt,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('QueueRow(')
+          ..write('id: $id, ')
+          ..write('entranceId: $entranceId, ')
+          ..write('localUri: $localUri, ')
+          ..write('remotePath: $remotePath, ')
+          ..write('state: $state, ')
+          ..write('attempts: $attempts, ')
+          ..write('nextAttemptAt: $nextAttemptAt, ')
+          ..write('lastError: $lastError, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    entranceId,
+    localUri,
+    remotePath,
+    state,
+    attempts,
+    nextAttemptAt,
+    lastError,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is QueueRow &&
+          other.id == this.id &&
+          other.entranceId == this.entranceId &&
+          other.localUri == this.localUri &&
+          other.remotePath == this.remotePath &&
+          other.state == this.state &&
+          other.attempts == this.attempts &&
+          other.nextAttemptAt == this.nextAttemptAt &&
+          other.lastError == this.lastError &&
+          other.createdAt == this.createdAt);
+}
+
+class PhotoQueueCompanion extends UpdateCompanion<QueueRow> {
+  final Value<String> id;
+  final Value<String> entranceId;
+  final Value<String> localUri;
+  final Value<String> remotePath;
+  final Value<QueueState> state;
+  final Value<int> attempts;
+  final Value<int> nextAttemptAt;
+  final Value<String?> lastError;
+  final Value<int> createdAt;
+  final Value<int> rowid;
+  const PhotoQueueCompanion({
+    this.id = const Value.absent(),
+    this.entranceId = const Value.absent(),
+    this.localUri = const Value.absent(),
+    this.remotePath = const Value.absent(),
+    this.state = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.nextAttemptAt = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PhotoQueueCompanion.insert({
+    required String id,
+    required String entranceId,
+    required String localUri,
+    required String remotePath,
+    this.state = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.nextAttemptAt = const Value.absent(),
+    this.lastError = const Value.absent(),
+    required int createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       entranceId = Value(entranceId),
+       localUri = Value(localUri),
+       remotePath = Value(remotePath),
+       createdAt = Value(createdAt);
+  static Insertable<QueueRow> custom({
+    Expression<String>? id,
+    Expression<String>? entranceId,
+    Expression<String>? localUri,
+    Expression<String>? remotePath,
+    Expression<String>? state,
+    Expression<int>? attempts,
+    Expression<int>? nextAttemptAt,
+    Expression<String>? lastError,
+    Expression<int>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (entranceId != null) 'entrance_id': entranceId,
+      if (localUri != null) 'local_uri': localUri,
+      if (remotePath != null) 'remote_path': remotePath,
+      if (state != null) 'state': state,
+      if (attempts != null) 'attempts': attempts,
+      if (nextAttemptAt != null) 'next_attempt_at': nextAttemptAt,
+      if (lastError != null) 'last_error': lastError,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PhotoQueueCompanion copyWith({
+    Value<String>? id,
+    Value<String>? entranceId,
+    Value<String>? localUri,
+    Value<String>? remotePath,
+    Value<QueueState>? state,
+    Value<int>? attempts,
+    Value<int>? nextAttemptAt,
+    Value<String?>? lastError,
+    Value<int>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return PhotoQueueCompanion(
+      id: id ?? this.id,
+      entranceId: entranceId ?? this.entranceId,
+      localUri: localUri ?? this.localUri,
+      remotePath: remotePath ?? this.remotePath,
+      state: state ?? this.state,
+      attempts: attempts ?? this.attempts,
+      nextAttemptAt: nextAttemptAt ?? this.nextAttemptAt,
+      lastError: lastError ?? this.lastError,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (entranceId.present) {
+      map['entrance_id'] = Variable<String>(entranceId.value);
+    }
+    if (localUri.present) {
+      map['local_uri'] = Variable<String>(localUri.value);
+    }
+    if (remotePath.present) {
+      map['remote_path'] = Variable<String>(remotePath.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(
+        $PhotoQueueTable.$converterstate.toSql(state.value),
+      );
+    }
+    if (attempts.present) {
+      map['attempts'] = Variable<int>(attempts.value);
+    }
+    if (nextAttemptAt.present) {
+      map['next_attempt_at'] = Variable<int>(nextAttemptAt.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PhotoQueueCompanion(')
+          ..write('id: $id, ')
+          ..write('entranceId: $entranceId, ')
+          ..write('localUri: $localUri, ')
+          ..write('remotePath: $remotePath, ')
+          ..write('state: $state, ')
+          ..write('attempts: $attempts, ')
+          ..write('nextAttemptAt: $nextAttemptAt, ')
+          ..write('lastError: $lastError, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $BuildingsTable buildings = $BuildingsTable(this);
   late final $EntrancesTable entrances = $EntrancesTable(this);
   late final $PhotosTable photos = $PhotosTable(this);
+  late final $PhotoQueueTable photoQueue = $PhotoQueueTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2915,6 +3487,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     buildings,
     entrances,
     photos,
+    photoQueue,
   ];
 }
 
@@ -4632,6 +5205,290 @@ typedef $$PhotosTableProcessedTableManager =
       PhotoRow,
       PrefetchHooks Function({bool entranceId})
     >;
+typedef $$PhotoQueueTableCreateCompanionBuilder = PhotoQueueCompanion Function({
+  required String id,
+  required String entranceId,
+  required String localUri,
+  required String remotePath,
+  Value<QueueState> state,
+  Value<int> attempts,
+  Value<int> nextAttemptAt,
+  Value<String?> lastError,
+  required int createdAt,
+  Value<int> rowid,
+});
+typedef $$PhotoQueueTableUpdateCompanionBuilder = PhotoQueueCompanion Function({
+  Value<String> id,
+  Value<String> entranceId,
+  Value<String> localUri,
+  Value<String> remotePath,
+  Value<QueueState> state,
+  Value<int> attempts,
+  Value<int> nextAttemptAt,
+  Value<String?> lastError,
+  Value<int> createdAt,
+  Value<int> rowid,
+});
+
+class $$PhotoQueueTableFilterComposer
+    extends Composer<_$AppDatabase, $PhotoQueueTable> {
+  $$PhotoQueueTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entranceId => $composableBuilder(
+    column: $table.entranceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localUri => $composableBuilder(
+    column: $table.localUri,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get remotePath => $composableBuilder(
+    column: $table.remotePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<QueueState, QueueState, String> get state =>
+      $composableBuilder(
+        column: $table.state,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get nextAttemptAt => $composableBuilder(
+    column: $table.nextAttemptAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PhotoQueueTableOrderingComposer
+    extends Composer<_$AppDatabase, $PhotoQueueTable> {
+  $$PhotoQueueTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entranceId => $composableBuilder(
+    column: $table.entranceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localUri => $composableBuilder(
+    column: $table.localUri,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remotePath => $composableBuilder(
+    column: $table.remotePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get nextAttemptAt => $composableBuilder(
+    column: $table.nextAttemptAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PhotoQueueTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PhotoQueueTable> {
+  $$PhotoQueueTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get entranceId => $composableBuilder(
+    column: $table.entranceId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get localUri =>
+      $composableBuilder(column: $table.localUri, builder: (column) => column);
+
+  GeneratedColumn<String> get remotePath => $composableBuilder(
+    column: $table.remotePath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<QueueState, String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumn<int> get attempts =>
+      $composableBuilder(column: $table.attempts, builder: (column) => column);
+
+  GeneratedColumn<int> get nextAttemptAt => $composableBuilder(
+    column: $table.nextAttemptAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$PhotoQueueTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PhotoQueueTable,
+          QueueRow,
+          $$PhotoQueueTableFilterComposer,
+          $$PhotoQueueTableOrderingComposer,
+          $$PhotoQueueTableAnnotationComposer,
+          $$PhotoQueueTableCreateCompanionBuilder,
+          $$PhotoQueueTableUpdateCompanionBuilder,
+          (QueueRow, BaseReferences<_$AppDatabase, $PhotoQueueTable, QueueRow>),
+          QueueRow,
+          PrefetchHooks Function()
+        > {
+  $$PhotoQueueTableTableManager(_$AppDatabase db, $PhotoQueueTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PhotoQueueTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PhotoQueueTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PhotoQueueTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> entranceId = const Value.absent(),
+                Value<String> localUri = const Value.absent(),
+                Value<String> remotePath = const Value.absent(),
+                Value<QueueState> state = const Value.absent(),
+                Value<int> attempts = const Value.absent(),
+                Value<int> nextAttemptAt = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PhotoQueueCompanion(
+                id: id,
+                entranceId: entranceId,
+                localUri: localUri,
+                remotePath: remotePath,
+                state: state,
+                attempts: attempts,
+                nextAttemptAt: nextAttemptAt,
+                lastError: lastError,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String entranceId,
+                required String localUri,
+                required String remotePath,
+                Value<QueueState> state = const Value.absent(),
+                Value<int> attempts = const Value.absent(),
+                Value<int> nextAttemptAt = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                required int createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => PhotoQueueCompanion.insert(
+                id: id,
+                entranceId: entranceId,
+                localUri: localUri,
+                remotePath: remotePath,
+                state: state,
+                attempts: attempts,
+                nextAttemptAt: nextAttemptAt,
+                lastError: lastError,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PhotoQueueTable, QueueRow>(table),
+                  BaseReferences<_$AppDatabase, $PhotoQueueTable, QueueRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PhotoQueueTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PhotoQueueTable,
+      QueueRow,
+      $$PhotoQueueTableFilterComposer,
+      $$PhotoQueueTableOrderingComposer,
+      $$PhotoQueueTableAnnotationComposer,
+      $$PhotoQueueTableCreateCompanionBuilder,
+      $$PhotoQueueTableUpdateCompanionBuilder,
+      (QueueRow, BaseReferences<_$AppDatabase, $PhotoQueueTable, QueueRow>),
+      QueueRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4642,4 +5499,6 @@ class $AppDatabaseManager {
       $$EntrancesTableTableManager(_db, _db.entrances);
   $$PhotosTableTableManager get photos =>
       $$PhotosTableTableManager(_db, _db.photos);
+  $$PhotoQueueTableTableManager get photoQueue =>
+      $$PhotoQueueTableTableManager(_db, _db.photoQueue);
 }

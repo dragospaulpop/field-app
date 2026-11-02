@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import 'auth.dart';
+import 'photo_queue.dart';
 import 'contract/contract.dart';
+import 'db/database.dart' show QueueState;
 import 'providers.dart';
 import 'repositories.dart';
 
@@ -31,10 +33,13 @@ void pullPins(WidgetRef ref) => ref.invalidate(myPinsProvider);
 Future<void> signOutIfSent(BuildContext context, WidgetRef ref) async {
   final box = await ref.read(databaseProvider).watchOutbox().first;
   final waiting = box.pending + box.failed;
-  if (waiting == 0) return signOut();
+  // Step 4: the photo queue too (every row not synced yet).
+  final queue = (await ref.read(databaseProvider).watchQueue().first).counts;
+  final photos = queue.entries.where((q) => q.key != QueueState.synced).fold(0, (n, q) => n + q.value);
+  if (waiting == 0 && photos == 0) return signOut();
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-    content: Text('$waiting survey(s) not sent yet: tap Sync now, then sign out.'),
+    content: Text('$waiting survey(s) and $photos photo(s) not sent yet: tap Sync now (or Retry photos), then sign out.'),
   ));
 }
 
@@ -110,6 +115,7 @@ class SyncScope extends ConsumerStatefulWidget {
 class _SyncScopeState extends ConsumerState<SyncScope> {
   late final AppLifecycleListener _lifecycle;
   late final StreamSubscription<List<ConnectivityResult>> _network;
+  late final PhotoQueue _queue = ref.read(photoQueueProvider);
 
   @override
   void initState() {
@@ -118,14 +124,20 @@ class _SyncScopeState extends ConsumerState<SyncScope> {
     // fetch), back in the foreground, and when the network comes back. (And on
     // "Sync now"; the push also after a submit.)
     pushSurveys(ref);
+    // The photo queue resumes: rows cut off mid-upload go back to pending,
+    // photos from before the queue join it, then the worker starts.
+    final db = ref.read(databaseProvider);
+    db.resumeUploading().then((_) => enqueueLeftovers(db, ref.read(uidProvider))).then((_) => _queue.drain());
     _lifecycle = AppLifecycleListener(onResume: () {
       pushSurveys(ref);
       pullPins(ref);
+      _queue.drain();
     });
     _network = Connectivity().onConnectivityChanged.listen((links) {
       if (links.contains(ConnectivityResult.none)) return;
       pushSurveys(ref);
       pullPins(ref);
+      _queue.drain();
     });
     // The pull: every list of my pins goes to SQLite, the truth on the
     // phone. listenManual keeps the provider alive while this widget lives.
@@ -139,6 +151,7 @@ class _SyncScopeState extends ConsumerState<SyncScope> {
   void dispose() {
     _lifecycle.dispose();
     _network.cancel();
+    _queue.stop(); // signed out: no wake-up until someone signs in again
     super.dispose();
   }
 
