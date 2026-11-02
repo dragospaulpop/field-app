@@ -79,12 +79,25 @@ export const supabasePins: PinsRepository = {
   refresh: () => pullNow?.(),
 };
 
+// Errors that a retry cannot fix: a missing privilege (an office column), a check
+// constraint, a NOT NULL, a value of the wrong type. Everything else is retried.
+const PERMANENT = new Set(['42501', '23514', '23502', '22P02']);
+
+/** The sentence the worker reads; the code is for the developer, in brackets. */
+function sentence(code: string, message: string) {
+  if (code === '42501')
+    return `This app tried to change something only the office may change. Tell your teacher: it is a bug. (${code})`;
+  if (code === '23514') return `One of the numbers is outside what the form allows. (${code}: ${message})`;
+  return `The server refused this survey. (${code}: ${message})`;
+}
+
 export const supabaseSurveys: SurveysRepository = {
   async push(s: SurveyDoc) {
-    const { data, error } = await supabase
-      .from('entrances')
-      .update({
-        // The survey's columns only, never the office's (lat, lng, assigned_to...).
+    // One call, one statement on the server: applied only if this version is newer
+    // than the row's (row-level last-writer-wins, judged by Postgres, not the phone).
+    const { data, error } = await supabase.rpc('upsert_survey', {
+      p_entrance_id: s.id,
+      p_fields: {
         street: s.street,
         number: s.number,
         entrance_name: s.entranceName,
@@ -99,14 +112,23 @@ export const supabaseSurveys: SurveysRepository = {
         ground_floor_commercial: s.groundFloorCommercial,
         comment: s.comment,
         survey_status: s.surveyStatus,
-        surveyed_by: s.surveyedBy,
         surveyed_at: s.surveyedAt,
-        updated_at: s.updatedAt,
-      })
-      .eq('id', s.id)
-      .select('id'); // ask for the changed rows back
-    if (error) throw new Error(`${error.code}: ${error.message}`);
-    // Zero rows and no error: RLS hid the row (it is not mine any more). That is a refusal.
-    if (data.length === 0) throw new Error('refused: this entrance is no longer assigned to you');
+        // no surveyed_by: the server takes it from the token (auth.uid())
+      },
+      p_client_updated_at: s.updatedAt,
+    });
+    if (error) {
+      // No network: supabase-js returns an error with an empty code (no database answered).
+      return PERMANENT.has(error.code)
+        ? { kind: 'refused', message: sentence(error.code, error.message) }
+        : { kind: 'retry', message: error.message };
+    }
+    return data === true ? { kind: 'applied' } : { kind: 'lost' };
   },
 };
+
+/** Dev only (step 3's check): try to move a pin, which is the office's column. Expect 42501. */
+export async function tryToMovePin(id: string, lat: number): Promise<string> {
+  const { error } = await supabase.from('entrances').update({ lat }).eq('id', id);
+  return error ? `${error.code}: ${error.message}` : 'moved: the office column is NOT protected';
+}

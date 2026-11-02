@@ -20,7 +20,14 @@ export interface PinsRepository {
   refresh(): void;
 }
 
+/** What the cloud did with a survey (step 3). */
+export type PushOutcome =
+  | { kind: 'applied' } // the server took it
+  | { kind: 'lost' } // not applied: a newer (or the same) version is there, or the pin is not mine
+  | { kind: 'refused'; message: string } // an error a retry cannot fix
+  | { kind: 'retry'; message: string }; // no answer, or an error that may pass
+
 export interface SurveysRepository {
-  /** Idempotent: sending the same survey twice leaves one row as it was. Throws when refused. */
-  push(survey: SurveyDoc): Promise<void>;
+  /** Idempotent: sending the same survey twice changes nothing the second time. Never throws. */
+  push(survey: SurveyDoc): Promise<PushOutcome>;
 }

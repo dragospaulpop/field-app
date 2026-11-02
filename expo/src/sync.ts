@@ -5,7 +5,7 @@ import { AppState } from 'react-native';
 import { pins, surveys } from './cloud';
 import { type Entrance, EntranceSurvey } from './contract/contract';
 import { signOut } from './auth';
-import { markSent, outbox, savePins, unsentSurveys } from './store';
+import { LOST, markSent, outbox, savePins, unsentSurveys } from './store';
 
 /** Server state: what the cloud says right now. Screens still read SQLite. */
 export const queryClient = new QueryClient();
@@ -60,20 +60,37 @@ export async function pushSurveys(uid: string) {
   pushing = true;
   try {
     for (const e of await outbox()) {
-      try {
-        await surveys.push({
-          // The contract's survey schema picks the surveyed fields (and checks them).
-          ...EntranceSurvey.parse(e),
-          id: e.id,
-          surveyStatus: e.surveyStatus,
-          surveyedBy: uid,
-          surveyedAt: e.surveyedAt ?? e.updatedAt,
-          updatedAt: e.updatedAt,
-        });
-        await markSent(e.id, e.updatedAt, null);
-      } catch (err) {
-        // A refusal (the pin is no longer mine, a grant is missing) or no network.
-        await markSent(e.id, e.updatedAt, err instanceof Error ? err.message : String(err));
+      // The contract's survey schema picks the surveyed fields (and checks them).
+      const checked = EntranceSurvey.safeParse(e);
+      if (!checked.success) {
+        await markSent(e.id, e.updatedAt, 'failed', `The survey is incomplete: ${checked.error.issues[0]?.message}`);
+        continue;
+      }
+      const outcome = await surveys.push({
+        ...checked.data,
+        id: e.id,
+        surveyStatus: e.surveyStatus,
+        surveyedBy: uid,
+        surveyedAt: e.surveyedAt ?? e.updatedAt,
+        updatedAt: e.updatedAt,
+      });
+      switch (outcome.kind) {
+        case 'applied':
+          await markSent(e.id, e.updatedAt, 'synced', null);
+          break;
+        case 'lost':
+          // Not applied: the server holds this version or a newer one, or the pin
+          // is not mine any more. Synced, so the pull below may replace the row
+          // with the server's (newer) version, or delete it (not mine).
+          await markSent(e.id, e.updatedAt, 'synced', LOST);
+          break;
+        case 'refused':
+          await markSent(e.id, e.updatedAt, 'failed', outcome.message);
+          break;
+        case 'retry':
+          // No network is the normal state of a phone in a stairwell: try at the next push.
+          await markSent(e.id, e.updatedAt, 'pending', `Waiting to send: ${outcome.message}`);
+          break;
       }
     }
   } finally {

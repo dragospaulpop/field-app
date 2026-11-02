@@ -2,7 +2,7 @@ import { skipToken, useQuery } from '@tanstack/react-query';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { currentUser } from '../auth';
 import type { Entrance } from '../contract/contract';
-import { useOutbox } from '../store';
+import { retryFailed, useOutbox } from '../store';
 import { myPinsKey, pushSurveys } from '../sync';
 import { useColors } from '../theme';
 
@@ -24,11 +24,16 @@ export function SyncBar() {
         <Text style={{ color: colors.muted, fontSize: 12 }}>no pins yet: ask the office to assign some</Text>
       )}
       <Text style={{ color: colors.muted, fontSize: 12 }}>
-        {box.pending} to send · {box.failed} refused
+        {box.pending} to send · {box.failed} refused · {box.lost} ignored
       </Text>
       <Pressable accessibilityRole="button" onPress={() => pushSurveys(uid)}>
         <Text style={[styles.link, { color: colors.primary }]}>Sync now</Text>
       </Pressable>
+      {box.failed > 0 && (
+        <Pressable accessibilityRole="button" onPress={() => retryFailed().then(() => pushSurveys(uid))}>
+          <Text style={[styles.link, { color: colors.primary }]}>Retry all</Text>
+        </Pressable>
+      )}
       {box.lastError && <Text style={styles.error}>last refusal: {box.lastError}</Text>}
     </View>
   );
