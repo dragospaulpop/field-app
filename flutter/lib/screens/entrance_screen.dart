@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../providers.dart';
 import 'here_card.dart';
 import 'photos_card.dart';
+import 'rules_card.dart';
 import 'status_chip.dart';
+import 'sync_chip.dart';
 import 'visit_lines.dart';
 
 String show(Object? v) => v == null ? '—' : v is bool ? (v ? 'Yes' : 'No') : '$v';
@@ -52,6 +54,7 @@ class EntranceScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Align(alignment: Alignment.centerLeft, child: StatusChip(status: e.surveyStatus)),
+          SyncChip(entranceId: e.id),
           const SizedBox(height: 8),
           Text('Office pin: ${e.lat.toStringAsFixed(5)}, ${e.lng.toStringAsFixed(5)}'),
           if (building?.comment != null) Text('Office note: ${building!.comment}'),
@@ -72,6 +75,7 @@ class EntranceScreen extends ConsumerWidget {
           const HereCard(),
           VisitLines(entrance: e),
           PhotosCard(entranceId: e.id),
+          RulesCard(entrance: e),
         ],
       ),
     );

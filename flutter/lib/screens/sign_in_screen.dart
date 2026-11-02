@@ -1,16 +1,19 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException, AuthRetryableFetchException;
 
-/// A Firebase error code, said the way a worker understands it.
+import '../auth.dart';
+
+/// A Supabase Auth error code, said the way a worker understands it.
 String messageFor(Object e) {
-  final code = e is FirebaseAuthException ? e.code : '';
+  // No answer at all (offline, a timeout) is its own exception, with no code.
+  if (e is AuthRetryableFetchException) return 'No connection: signing in needs the network.';
+  final code = e is AuthException ? (e.code ?? '') : '';
   return switch (code) {
-    // The Auth emulator (step 11) still answers with the two older codes.
-    'invalid-credential' || 'user-not-found' || 'wrong-password' => 'Wrong email or password.',
-    'invalid-email' => 'That is not an email address.',
-    'email-already-in-use' => 'This email already has an account: sign in instead.',
-    'weak-password' => 'The password needs at least 6 characters.',
-    'network-request-failed' => 'No connection: signing in needs the network.',
+    'invalid_credentials' => 'Wrong email or password.',
+    'email_address_invalid' || 'validation_failed' => 'That is not an email address.',
+    'user_already_exists' || 'email_exists' => 'This email already has an account: sign in instead.',
+    'weak_password' => 'The password needs at least 6 characters.',
+    'email_not_confirmed' => 'Confirm your email first: open the link Supabase sent you.',
     _ => 'Could not sign in (${code.isEmpty ? e : code}).',
   };
 }
@@ -35,15 +38,14 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
-  // No navigation here: authStateChanges() in main.dart swaps the screen.
-  Future<void> _run(
-      Future<UserCredential> Function({required String email, required String password}) how) async {
+  // No navigation here: onAuthStateChange (auth.dart) swaps the screen.
+  Future<void> _run(Future<void> Function(String email, String password) how) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      await how(email: _email.text.trim(), password: _password.text);
+      await how(_email.text.trim(), _password.text);
     } catch (e) {
       setState(() => _error = messageFor(e));
     } finally {
@@ -53,7 +55,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = FirebaseAuth.instance;
     return Scaffold(
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.all(24), children: [
@@ -72,7 +73,7 @@ class _SignInScreenState extends State<SignInScreen> {
             decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
             obscureText: true,
             autofillHints: const [AutofillHints.password],
-            onSubmitted: (_) => _run(auth.signInWithEmailAndPassword),
+            onSubmitted: (_) => _run(signIn),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
@@ -84,11 +85,11 @@ class _SignInScreenState extends State<SignInScreen> {
           else
             Wrap(spacing: 12, children: [
               FilledButton(
-                onPressed: () => _run(auth.signInWithEmailAndPassword),
+                onPressed: () => _run(signIn),
                 child: const Text('Sign in'),
               ),
               OutlinedButton(
-                onPressed: () => _run(auth.createUserWithEmailAndPassword),
+                onPressed: () => _run(signUp),
                 child: const Text('Create account'),
               ),
             ]),

@@ -10,8 +10,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import 'auth.dart';
 import 'db/database.dart';
 import 'location.dart';
+import 'photo_queue.dart';
 import 'providers.dart';
 
 /// What the photo file says about itself (EXIF), as far as we read it tonight.
@@ -48,8 +50,12 @@ Future<ExifSummary> _save(WidgetRef ref, String entranceId, XFile picked,
     {Fix? where, double? heading, required String takenAt}) async {
   final id = const Uuid().v4(); // the photo's id, born on the phone
   final now = DateTime.now().toUtc().toIso8601String();
-  final bytes = await picked.readAsBytes();
+  // Everything from ref first: the screen (and its ref) may be gone by the
+  // time the file is read and saved.
   final db = ref.read(databaseProvider);
+  final uid = ref.read(uidProvider);
+  final queue = ref.read(photoQueueProvider);
+  final bytes = await picked.readAsBytes();
   await db.into(db.photos).insert(PhotosCompanion.insert(
         id: id,
         createdAt: now,
@@ -63,6 +69,9 @@ Future<ExifSummary> _save(WidgetRef ref, String entranceId, XFile picked,
         localUri: await _keep(picked, bytes, id),
         // uploadState, reviewStatus and syncState start as 'pending' (the defaults)
       ));
+  // Week 5: the photo joins the upload queue at once, and the worker starts.
+  await enqueuePhoto(db, await db.photo(id), uid);
+  queue.drain();
   return readExif(bytes);
 }
 

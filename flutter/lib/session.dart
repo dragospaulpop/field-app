@@ -23,6 +23,10 @@ final tokenProvider = FutureProvider<String>((ref) async {
 Future<String> lastTab() async => await _prefs.getString('field.lastTab') ?? '/map';
 Future<void> saveLastTab(String path) => _prefs.setString('field.lastTab', path);
 
+/// Week 5: may photos use mobile data? A preference too.
+Future<bool> photosOnMobileData() async => await _prefs.getBool('field.photosOnMobileData') ?? false;
+Future<void> savePhotosOnMobileData(bool on) => _prefs.setBool('field.photosOnMobileData', on);
+
 /// The network link: wifi, mobile, none… (it says nothing about whether the
 /// internet answers — week 5 learns to ask the server).
 final connectivityProvider = StreamProvider<List<ConnectivityResult>>((ref) async* {
