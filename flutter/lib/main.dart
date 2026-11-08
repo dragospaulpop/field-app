@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +16,7 @@ import 'theme/app_theme.dart';
 import 'screens/building_screen.dart';
 import 'screens/entrance_screen.dart';
 import 'screens/inbox_screen.dart';
+import 'screens/long_list_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/route_screen.dart';
 import 'screens/sign_in_screen.dart';
@@ -91,6 +93,8 @@ final _router = GoRouter(
       ],
     ),
     // Outside the shell: these cover the tab bar, like a stack screen.
+    // Step 7: the list to measure; never in a release build.
+    if (!kReleaseMode) GoRoute(path: '/dev/long-list', builder: (context, state) => const LongListScreen()),
     GoRoute(
       path: '/buildings/:id',
       builder: (context, state) => BuildingScreen(id: state.pathParameters['id']!),

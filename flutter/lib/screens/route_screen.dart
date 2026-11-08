@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,7 +27,18 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
     final route = f.routes.firstWhere((r) => r.workerId == f.me);
     final stops = filterStops(f.stops.where((s) => s.routeId == route.id), _filter);
     return Scaffold(
-      appBar: AppBar(title: Text('${route.name} · ${route.date}')),
+      appBar: AppBar(
+        title: Text('${route.name} · ${route.date}'),
+        actions: [
+          // Step 7: the list to measure, out of the map's way; not in release builds.
+          if (!kReleaseMode)
+            IconButton(
+              tooltip: 'Dev: long list',
+              icon: const Icon(Icons.speed),
+              onPressed: () => context.push('/dev/long-list'),
+            ),
+        ],
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

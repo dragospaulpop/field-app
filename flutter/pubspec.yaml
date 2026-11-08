@@ -58,6 +58,11 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Step 7: the scripted scroll, measured on a device (flutter drive --profile).
+  integration_test:
+    sdk: flutter
+  flutter_driver:
+    sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -81,6 +86,7 @@ flutter:
 
   assets:
     - assets/fixtures/
+    - assets/perf/ # step 7: six photos for the long list
 
   # To add assets to your application, add an assets section, like this:
   # assets:
