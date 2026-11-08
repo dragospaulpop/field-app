@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { pins, surveys } from './cloud';
 import { drainQueue, resetUploading, waitingPhotos } from './photoQueue';
+import { watchEntrances } from './realtime';
 import { type Entrance, EntranceSurvey } from './contract/contract';
 import { liveSession, onTokenRefreshed, signOut } from './auth';
 import { LOST, markSent, outbox, savePins, unsentSurveys } from './store';
@@ -32,6 +33,33 @@ export function useSync(uid: string) {
       (e) => console.warn('pins pull', e),
     );
     return stop; // signing out unmounts the hook: the listener stops
+  }, [uid]);
+
+  // Step 3: the office's changes, at once. Realtime knocks, the pull answers.
+  // In the background the channel is left (a phone suspends its socket anyway);
+  // back in the foreground it joins again (after the leave has finished: until
+  // then the client hands back the leaving channel), and the join runs a pull.
+  useEffect(() => {
+    let leave: (() => Promise<unknown>) | null = null;
+    let left: Promise<unknown> = Promise.resolve();
+    let closed = false;
+    const join = () =>
+      left.then(() => {
+        if (!closed && !leave) leave = watchEntrances(uid, () => pins.refresh());
+      });
+    join();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') join();
+      else if (state === 'background' && leave) {
+        left = leave();
+        leave = null;
+      }
+    });
+    return () => {
+      closed = true;
+      sub.remove();
+      leave?.();
+    };
   }, [uid]);
 
   // The push, at three moments: now, when the app comes back to the

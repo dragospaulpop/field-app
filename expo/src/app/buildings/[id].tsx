@@ -3,6 +3,8 @@ import { FlatList, Pressable, Text, View } from 'react-native';
 import { StatusChip } from '../../components/StatusChip';
 import { SURVEYED } from '../../contract/contract';
 import { buildings } from '../../contract/fixtures';
+import { currentUser } from '../../auth';
+import { type Person, type PresenceStatus, usePresence } from '../../realtime';
 import { useEntrances } from '../../store';
 
 export default function BuildingScreen() {
@@ -10,6 +12,7 @@ export default function BuildingScreen() {
   const building = buildings.find((b) => b.id === id);
   const entrances = useEntrances().filter((e) => e.buildingId === id);
   const surveyed = entrances.filter((e) => SURVEYED.includes(e.surveyStatus)).length;
+  const { people, status } = usePresence(id); // step 3: who else is here now
   return (
     <>
       <Stack.Screen options={{ title: building?.label ?? 'Building' }} />
@@ -27,6 +30,7 @@ export default function BuildingScreen() {
             <Text className="text-muted">
               {entrances.length} entrances · {surveyed} submitted
             </Text>
+            <HereNow status={status} people={people} />
           </View>
         }
         renderItem={({ item: e }) => (
@@ -46,5 +50,32 @@ export default function BuildingScreen() {
         )}
       />
     </>
+  );
+}
+
+const SAY: Record<PresenceStatus, string> = {
+  joining: 'Here now: joining…',
+  here: 'Here now',
+  refused: 'Here now: only for the workers of this building (you have no entrance here).',
+  away: 'Here now: paused while the app is in the background',
+};
+
+/** Who else has this building open right now: a hint about connections, not a fact. */
+function HereNow({ status, people }: { status: PresenceStatus; people: Person[] }) {
+  const me = currentUser()?.id;
+  return (
+    <View className="mt-2 gap-1 rounded-xl border border-border bg-surface p-3">
+      <Text className="font-semibold text-on-surface">
+        {SAY[status]}
+        {status === 'here' ? ` · ${people.length} ${people.length === 1 ? 'person' : 'people'}` : ''}
+      </Text>
+      {people.map((p) => (
+        <Text key={p.userId} className="text-muted">
+          ● {p.email}
+          {p.userId === me ? ' (you)' : ''}
+          {p.devices > 1 ? ` · on ${p.devices} devices` : ''} · since {new Date(p.since).toLocaleTimeString()}
+        </Text>
+      ))}
+    </View>
   );
 }
