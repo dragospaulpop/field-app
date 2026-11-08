@@ -57,6 +57,7 @@ export function SignIn() {
     <View className="flex-1 justify-center gap-3 bg-background p-6">
       <Text className="mb-2 text-[22px] font-bold text-on-surface">Field app — sign in</Text>
       <TextInput
+        testID="email"
         className={input}
         placeholder="Email"
         placeholderTextColor={colors.muted}
@@ -67,6 +68,7 @@ export function SignIn() {
         onChangeText={setEmail}
       />
       <TextInput
+        testID="password"
         className={input}
         placeholder="Password"
         placeholderTextColor={colors.muted}
@@ -82,6 +84,7 @@ export function SignIn() {
       ) : (
         <View className="flex-row gap-3">
           <Pressable
+            testID="sign-in"
             accessibilityRole="button"
             className="min-h-12 flex-1 items-center justify-center rounded-lg bg-primary active:opacity-70"
             onPress={() => run('in')}

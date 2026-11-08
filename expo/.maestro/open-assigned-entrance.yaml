@@ -1,0 +1,28 @@
+# Week 6, step 6: one end-to-end flow on the emulator, with the app as a user
+# sees it (a release build: no Metro, no development menu).
+# Run: maestro test .maestro\open-assigned-entrance.yaml -e EMAIL=<a worker> -e PASSWORD=<the password>
+appId: ro.rau.field_app
+---
+- launchApp:
+    clearState: true # a fresh install: signed out
+    permissions:
+      notifications: allow # granted up front; the prompt itself is step 4's hand test
+- tapOn:
+    id: "email"
+- inputText: ${EMAIL}
+- tapOn:
+    id: "password"
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: "sign-in"
+- extendedWaitUntil:
+    visible: "My route"
+    timeout: 30000
+- tapOn: "My route"
+- tapOn: "Strada Lipscani 41"
+- assertVisible:
+    id: "entrance-title"
+- assertVisible:
+    id: "remind-me"
+- assertVisible: "Synced"

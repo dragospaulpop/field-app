@@ -47,7 +47,8 @@ export default function EntranceScreen() {
       className="bg-background"
       contentContainerClassName="items-start gap-3 p-4"
     >
-      <Text className="text-2xl font-bold text-on-surface">
+      {/* Step 6: testIDs are what the tests and the Maestro flow find (Android: resource-id). */}
+      <Text testID="entrance-title" className="text-2xl font-bold text-on-surface">
         {entrance.street} {entrance.number}
       </Text>
       <Text className="text-muted">{entrance.entranceName}</Text>
@@ -108,6 +109,7 @@ export default function EntranceScreen() {
       </Pressable>
       {/* Step 4: a local notification, set by the worker; its tap comes back here. */}
       <Pressable
+        testID="remind-me"
         accessibilityRole="button"
         onPress={async () => {
           if (!notificationsWork) return setReminder('Reminders are phone-only: open the app on your phone.');
