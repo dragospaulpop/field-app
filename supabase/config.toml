@@ -6,3 +6,11 @@ project_id = "field-app"
 # Sign up and sign in at once, without a confirmation email (the free plan
 # sends only a few emails an hour, and our test users have no inbox).
 enable_confirmations = false
+
+[functions.push-assignment]
+# Week 6, step 5: the push sender. The database trigger calls it with the
+# project's secret key (checked in the code), not with a user's JWT.
+enabled = true
+verify_jwt = false
+import_map = "./functions/push-assignment/deno.json"
+entrypoint = "./functions/push-assignment/index.ts"

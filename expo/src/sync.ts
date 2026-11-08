@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { pins, surveys } from './cloud';
 import { drainQueue, resetUploading, waitingPhotos } from './photoQueue';
+import { forgetPushToken } from './notifications';
 import { watchEntrances } from './realtime';
 import { type Entrance, EntranceSurvey } from './contract/contract';
 import { liveSession, onTokenRefreshed, signOut } from './auth';
@@ -159,6 +160,10 @@ export async function safeSignOut(): Promise<string | null> {
   if (n > 0) return `${n} ${n === 1 ? 'survey' : 'surveys'} not sent yet: Sync now first.`;
   const p = await waitingPhotos(); // step 4: the photo queue is the phone's too
   if (p > 0) return `${p} ${p === 1 ? 'photo' : 'photos'} not uploaded yet: wait for them, or Retry.`;
+  // Step 5: this phone's push address goes first, while the delete is still allowed.
+  if (!(await liveSession())) return noTokenYet(); // the delete would go as anon
+  const kept = await forgetPushToken();
+  if (kept) return kept;
   try {
     await signOut();
   } catch {

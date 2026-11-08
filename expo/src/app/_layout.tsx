@@ -9,7 +9,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SignIn } from '../components/SignIn';
 import { openDb } from '../db/db';
 import { useSession } from '../auth';
-import { createChannels, useNotificationRouting } from '../notifications';
+import { createChannels, useNotificationRouting, usePushRegistration } from '../notifications';
 import { configError } from '../supabase';
 import { queryClient, useSync } from '../sync';
 
@@ -49,6 +49,7 @@ function SignedIn({ uid }: { uid: string }) {
   const scheme = useColorScheme();
   useSync(uid);
   useNotificationRouting(); // step 4: a tap on a notification opens its entrance
+  usePushRegistration(uid); // step 5: this phone's FCM address, under this worker
 
   return (
     // TanStack Query's cache (sync.ts) for every screen.
