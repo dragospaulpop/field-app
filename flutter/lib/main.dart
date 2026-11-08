@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth.dart';
 import 'db/database.dart';
+import 'notifications.dart';
 import 'providers.dart';
 import 'session.dart';
 import 'theme/app_theme.dart';
@@ -36,6 +37,9 @@ Future<void> main() async {
   final db = AppDatabase();
   await db.seedIfEmpty(fixtures.buildings);
   _startAt = await lastTab(); // reopen on the tab the app was closed on
+  // Step 4: a tap on a notification opens its entrance, while the app runs
+  // (the callback) and when the tap started the app (the returned route).
+  final launchedFor = await initNotifications((route) => _router.push(route));
   runApp(ProviderScope(
     // Hand the two things main() opened to every provider that asks for them.
     overrides: [
@@ -44,6 +48,7 @@ Future<void> main() async {
     ],
     child: const FieldApp(),
   ));
+  if (launchedFor != null) _router.push(launchedFor); // on top of the start tab: Back still works
 }
 
 const _tabs = ['/map', '/route', '/inbox'];

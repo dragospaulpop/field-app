@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../notifications.dart';
 import '../providers.dart';
 import 'here_card.dart';
 import 'photos_card.dart';
@@ -69,6 +70,16 @@ class EntranceScreen extends ConsumerWidget {
           FilledButton(
             onPressed: () => context.push('/entrances/${e.id}/survey'),
             child: const Text('Survey'),
+          ),
+          const SizedBox(height: 8),
+          // Step 4: a local notification in a minute; its tap comes back here.
+          OutlinedButton.icon(
+            icon: const Icon(Icons.alarm),
+            label: const Text('Remind me in 1 minute'),
+            onPressed: () async {
+              final said = await remindInAMinute(e);
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(said)));
+            },
           ),
           const SizedBox(height: 8),
           const HereCard(),
