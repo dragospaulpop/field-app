@@ -1,8 +1,6 @@
 import 'package:field_app/screens/long_list_screen.dart';
 import 'package:field_app/theme/app_theme.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart' show PaintingBinding;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
