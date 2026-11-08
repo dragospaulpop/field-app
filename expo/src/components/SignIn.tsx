@@ -1,6 +1,6 @@
 import { isAuthError, isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { signIn, signUp } from '../auth';
 import { useColors } from '../theme';
 
@@ -50,12 +50,14 @@ export function SignIn() {
     }
   };
 
-  const input = [styles.input, { color: colors.text, borderColor: colors.muted }];
+  // Step 2: classNames from the theme (global.css). A placeholder's color is a
+  // prop, not a style, so it takes the value (useColors).
+  const input = 'min-h-12 rounded-lg border border-muted px-3 text-base text-on-surface';
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Field app — sign in</Text>
+    <View className="flex-1 justify-center gap-3 bg-background p-6">
+      <Text className="mb-2 text-[22px] font-bold text-on-surface">Field app — sign in</Text>
       <TextInput
-        style={input}
+        className={input}
         placeholder="Email"
         placeholderTextColor={colors.muted}
         autoCapitalize="none"
@@ -65,7 +67,7 @@ export function SignIn() {
         onChangeText={setEmail}
       />
       <TextInput
-        style={input}
+        className={input}
         placeholder="Password"
         placeholderTextColor={colors.muted}
         secureTextEntry
@@ -74,36 +76,27 @@ export function SignIn() {
         onChangeText={setPassword}
         onSubmitEditing={() => run('in')}
       />
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && <Text className="text-error">{error}</Text>}
       {busy ? (
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.primary} />
       ) : (
-        <View style={styles.row}>
+        <View className="flex-row gap-3">
           <Pressable
             accessibilityRole="button"
-            style={[styles.button, { backgroundColor: colors.primary }]}
+            className="min-h-12 flex-1 items-center justify-center rounded-lg bg-primary active:opacity-70"
             onPress={() => run('in')}
           >
-            <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Sign in</Text>
+            <Text className="font-bold text-on-primary">Sign in</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            style={[styles.button, { borderColor: colors.primary, borderWidth: 1 }]}
+            className="min-h-12 flex-1 items-center justify-center rounded-lg border border-primary active:opacity-70"
             onPress={() => run('up')}
           >
-            <Text style={{ color: colors.primary, fontWeight: '700' }}>Create account</Text>
+            <Text className="font-bold text-primary">Create account</Text>
           </Pressable>
         </View>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, justifyContent: 'center', padding: 24, gap: 12 },
-  title: { fontSize: 22, fontWeight: '700', marginBottom: 8 },
-  input: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, minHeight: 48, fontSize: 16 },
-  error: { color: '#dc2626' },
-  row: { flexDirection: 'row', gap: 12 },
-  button: { flex: 1, minHeight: 48, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-});

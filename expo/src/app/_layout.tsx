@@ -1,3 +1,5 @@
+// Step 2: the theme (Tailwind classes and the app's tokens), loaded before any screen.
+import '../global.css';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

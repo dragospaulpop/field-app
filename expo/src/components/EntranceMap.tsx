@@ -8,7 +8,7 @@ import {
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { useEntrances } from '../store';
-import { statusColor, statusLabel } from '../theme';
+import { statusClass, statusLabel } from '../theme';
 
 // OpenStreetMap's public tiles, weeks 2–4. Week 5 swaps this one constant for
 // the course's own Bucharest tiles.
@@ -60,28 +60,14 @@ export function EntranceMap() {
               accessible
               accessibilityRole="button"
               accessibilityLabel={`${e.street} ${e.number}, ${e.entranceName}, ${statusLabel[e.surveyStatus]}`}
-              style={styles.hit}
+              className="size-11 items-center justify-center"
             >
-              <View style={[styles.pin, { backgroundColor: statusColor[e.surveyStatus] }]} />
+              <View className={`size-6 rounded-full border-[3px] border-background ${statusClass[e.surveyStatus].pin}`} />
             </View>
           </Marker>
         ))}
       </MapLibreMap>
-      <Text style={styles.attribution}>© OpenStreetMap contributors</Text>
+      <Text className="absolute bottom-1 right-1 bg-background/80 px-1 text-[11px] text-on-surface">© OpenStreetMap contributors</Text>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  hit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  pin: { width: 24, height: 24, borderRadius: 12, borderWidth: 3, borderColor: '#ffffff' },
-  attribution: {
-    position: 'absolute',
-    right: 4,
-    bottom: 4,
-    fontSize: 11,
-    paddingHorizontal: 4,
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    color: '#111827',
-  },
-});

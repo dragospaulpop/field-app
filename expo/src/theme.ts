@@ -1,33 +1,26 @@
-import { useColorScheme } from 'react-native';
+import { useCSSVariable } from 'uniwind';
 import type { SurveyStatus } from './contract/contract';
 
-const light = {
-  background: '#ffffff',
-  card: '#f3f4f6',
-  text: '#111827',
-  muted: '#4b5563',
-  border: '#d1d5db',
-  primary: '#c2410c',
-  onPrimary: '#ffffff',
-  error: '#b91c1c',
+// Step 2: the colors live in global.css (light and dark). Screens use classNames;
+// this hook is for the few props that take a color value, not a className
+// (a tab bar's tint, a placeholder, the map's markers).
+const NAMES = ['--color-background', '--color-surface', '--color-on-surface', '--color-muted', '--color-border', '--color-primary', '--color-on-primary', '--color-error'] as const;
+
+export type Colors = {
+  background: string;
+  card: string;
+  text: string;
+  muted: string;
+  border: string;
+  primary: string;
+  onPrimary: string;
+  error: string;
 };
 
-const dark: typeof light = {
-  background: '#0b0f17',
-  card: '#1f2937',
-  text: '#f9fafb',
-  muted: '#9ca3af',
-  border: '#374151',
-  primary: '#fb923c',
-  onPrimary: '#111827',
-  error: '#f87171',
-};
-
-export type Colors = typeof light;
-
-/** The app follows the system: light or dark, read on every render. */
+/** The theme's colors as values; they follow the system's light or dark mode. */
 export function useColors(): Colors {
-  return useColorScheme() === 'dark' ? dark : light;
+  const [background, card, text, muted, border, primary, onPrimary, error] = useCSSVariable([...NAMES]).map(String);
+  return { background, card, text, muted, border, primary, onPrimary, error };
 }
 
 export const statusLabel: Record<SurveyStatus, string> = {
@@ -38,10 +31,13 @@ export const statusLabel: Record<SurveyStatus, string> = {
   needs_rework: 'Needs rework',
 };
 
-export const statusColor: Record<SurveyStatus, string> = {
-  not_started: '#6b7280',
-  in_progress: '#2563eb',
-  submitted: '#16a34a',
-  approved: '#15803d',
-  needs_rework: '#dc2626',
+// Whole class names only: Uniwind finds classes in the source at build time,
+// so `bg-${name}-bg` built from pieces would never be generated.
+// box + text: a chip; pin: the strong color, for a dot on the map.
+export const statusClass: Record<SurveyStatus, { box: string; text: string; pin: string }> = {
+  not_started: { box: 'bg-todo-bg', text: 'text-todo', pin: 'bg-todo' },
+  in_progress: { box: 'bg-progress-bg', text: 'text-progress', pin: 'bg-progress' },
+  submitted: { box: 'bg-done-bg', text: 'text-done', pin: 'bg-done' },
+  approved: { box: 'bg-done-bg', text: 'text-done', pin: 'bg-done' },
+  needs_rework: { box: 'bg-rework-bg', text: 'text-rework', pin: 'bg-rework' },
 };

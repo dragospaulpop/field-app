@@ -1,4 +1,5 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const { withUniwindConfig } = require('uniwind/metro');
 
 const config = getDefaultConfig(__dirname);
 
@@ -18,4 +19,8 @@ ServerResponse.prototype.writeHead = function (...args) {
   return writeHead.apply(this, args);
 };
 
-module.exports = config;
+// Step 2: Uniwind turns className into styles. Its wrapper must be the OUTERMOST one.
+module.exports = withUniwindConfig(config, {
+  cssEntryFile: './src/global.css', // the theme; Tailwind scans for classes from its folder down
+  dtsFile: './src/uniwind-types.d.ts', // written by Metro at start: the className types
+});

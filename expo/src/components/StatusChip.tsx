@@ -1,16 +1,11 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import type { SurveyStatus } from '../contract/contract';
-import { statusColor, statusLabel } from '../theme';
+import { statusClass, statusLabel } from '../theme';
 
 export function StatusChip({ status }: { status: SurveyStatus }) {
   return (
-    <View style={[styles.chip, { backgroundColor: statusColor[status] }]}>
-      <Text style={styles.text}>{statusLabel[status]}</Text>
+    <View className={`rounded-full px-2.5 py-1 ${statusClass[status].box}`}>
+      <Text className={`text-[13px] font-semibold ${statusClass[status].text}`}>{statusLabel[status]}</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  chip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  text: { color: '#ffffff', fontSize: 13, fontWeight: '600' },
-});

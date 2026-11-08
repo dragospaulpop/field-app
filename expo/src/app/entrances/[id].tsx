@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import type { Entrance } from '../../contract/contract';
 import { HereCard } from '../../components/HereCard';
 import { Photos } from '../../components/Photos';
@@ -11,7 +11,6 @@ import { markOpened, retryFailed, useBuilding, useEntrance, useField } from '../
 import { tryToMovePin } from '../../supabaseRepositories';
 import { pushSurveys } from '../../sync';
 import { fromWire, toWire } from '../../wire';
-import { useColors } from '../../theme';
 
 const show = (v: number | boolean | string | null) =>
   v === null ? '—' : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : String(v);
@@ -26,11 +25,10 @@ export default function EntranceScreen() {
     markOpened(id);
     useField.getState().openRecent(id);
   }, [id]);
-  const colors = useColors();
   const [moved, setMoved] = useState<string | null>(null);
   if (entrance === undefined) return null; // SQLite has not answered yet
   if (!entrance) {
-    return <Text style={{ color: colors.text, padding: 16 }}>No such entrance.</Text>;
+    return <Text className="p-4 text-on-surface">No such entrance.</Text>;
   }
   const rows: [string, number | boolean | string | null][] = [
     ['Pin confirmed', entrance.coordsConfirmed],
@@ -44,37 +42,37 @@ export default function EntranceScreen() {
   ];
   return (
     <ScrollView
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={styles.content}
+      className="bg-background"
+      contentContainerClassName="items-start gap-3 p-4"
     >
-      <Text style={[styles.h1, { color: colors.text }]}>
+      <Text className="text-2xl font-bold text-on-surface">
         {entrance.street} {entrance.number}
       </Text>
-      <Text style={{ color: colors.muted }}>{entrance.entranceName}</Text>
+      <Text className="text-muted">{entrance.entranceName}</Text>
       <Pressable
         accessibilityRole="link"
         onPress={() => router.push(`/buildings/${entrance.buildingId}`)}
-        style={styles.link}
+        className="min-h-11 justify-center"
       >
-        <Text style={{ color: colors.primary, fontWeight: '600' }}>
+        <Text className="font-semibold text-primary">
           {building?.label ?? 'Building'} · every entrance ›
         </Text>
       </Pressable>
-      <View style={styles.chips}>
+      <View className="flex-row items-center gap-2">
         <StatusChip status={entrance.surveyStatus} />
         <SyncChip state={entrance.syncState} />
       </View>
-      {entrance.lastError ? <Text style={{ color: colors.text }}>{entrance.lastError}</Text> : null}
+      {entrance.lastError ? <Text className="text-on-surface">{entrance.lastError}</Text> : null}
       {entrance.syncState === 'failed' && (
         <Pressable
           accessibilityRole="button"
           onPress={() => retryFailed(entrance.id).then(() => pushSurveys(currentUser()?.id ?? ''))}
-          style={styles.link}
+          className="min-h-11 justify-center"
         >
-          <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
+          <Text className="font-semibold text-primary">Retry</Text>
         </Pressable>
       )}
-      <Text style={{ color: colors.muted }}>
+      <Text className="text-muted">
         Office pin: {entrance.lat.toFixed(5)}, {entrance.lng.toFixed(5)}
       </Text>
       {/* Step 3's check, dev builds only: the pin's place is the office's column. */}
@@ -82,66 +80,46 @@ export default function EntranceScreen() {
         <Pressable
           accessibilityRole="button"
           onPress={() => tryToMovePin(entrance.id, entrance.lat + 0.0001).then(setMoved)}
-          style={styles.link}
+          className="min-h-11 justify-center"
         >
-          <Text style={{ color: colors.primary, fontWeight: '600' }}>Dev: try to move this pin</Text>
+          <Text className="font-semibold text-primary">Dev: try to move this pin</Text>
         </Pressable>
       )}
-      {moved ? <Text style={{ color: colors.muted }}>{moved}</Text> : null}
+      {moved ? <Text className="text-muted">{moved}</Text> : null}
       {building?.comment ? (
-        <Text style={{ color: colors.text }}>Office note: {building.comment}</Text>
+        <Text className="text-on-surface">Office note: {building.comment}</Text>
       ) : null}
-      <View style={[styles.table, { borderColor: colors.border }]}>
+      <View className="gap-2 self-stretch rounded-xl border border-border bg-surface p-3">
         {rows.map(([label, value]) => (
-          <View key={label} style={styles.row}>
-            <Text style={{ color: colors.muted }}>{label}</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{show(value)}</Text>
+          <View key={label} className="flex-row justify-between gap-3">
+            <Text className="text-muted">{label}</Text>
+            <Text className="shrink text-right font-semibold text-on-surface">{show(value)}</Text>
           </View>
         ))}
       </View>
       <Pressable
         accessibilityRole="button"
         onPress={() => router.push(`/survey/${entrance.id}`)}
-        style={({ pressed }) => [
-          styles.button,
-          { backgroundColor: colors.primary, opacity: pressed ? 0.7 : 1 },
-        ]}
+        className="min-h-12 items-center justify-center self-stretch rounded-xl bg-primary active:opacity-70"
       >
-        <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Survey</Text>
+        <Text className="font-bold text-on-primary">Survey</Text>
       </Pressable>
       <HereCard />
-      <Text style={{ color: colors.muted }}>
+      <Text className="text-muted">
         Opened on this phone: {entrance.openedAt ? new Date(entrance.openedAt).toLocaleString() : 'never'}
       </Text>
-      <WireJson entrance={entrance} color={colors.muted} />
+      <WireJson entrance={entrance} />
       <Photos entranceId={entrance.id} />
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  content: { padding: 16, gap: 12, alignItems: 'flex-start' },
-  h1: { fontSize: 24, fontWeight: '700' },
-  link: { minHeight: 44, justifyContent: 'center' },
-  chips: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  table: { alignSelf: 'stretch', borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  value: { flexShrink: 1, textAlign: 'right', fontWeight: '600' },
-  button: {
-    alignSelf: 'stretch',
-    minHeight: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
-
 /** Exercise 2: the entrance as it would travel, and the proof that it comes back the same. */
-function WireJson({ entrance, color }: { entrance: Entrance; color: string }) {
+function WireJson({ entrance }: { entrance: Entrance }) {
   const json = toWire(entrance);
   const same = toWire(fromWire(json)) === json;
   return (
-    <Text style={{ color, fontFamily: 'monospace', fontSize: 11 }}>
+    <Text className="font-mono text-[11px] text-muted">
       {same ? 'Round trip: same JSON ✓' : 'Round trip: DIFFERENT ✗'} · {json.length} characters, {Object.keys(JSON.parse(json)).length} keys
     </Text>
   );
