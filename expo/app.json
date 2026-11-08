@@ -42,7 +42,8 @@
           "locationWhenInUsePermission": "The field app tags your photos and new pins with where you stand."
         }
       ],
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      "expo-notifications"
     ],
     "scheme": "fieldapp"
   }

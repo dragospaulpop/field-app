@@ -9,6 +9,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SignIn } from '../components/SignIn';
 import { openDb } from '../db/db';
 import { useSession } from '../auth';
+import { createChannels, useNotificationRouting } from '../notifications';
 import { configError } from '../supabase';
 import { queryClient, useSync } from '../sync';
 
@@ -20,6 +21,7 @@ export default function RootLayout() {
       () => setState('ready'),
       (e: Error) => setState(e),
     );
+    createChannels(); // step 4: before anything may ask for the permission
   }, []);
 
   if (configError) {
@@ -46,6 +48,7 @@ export default function RootLayout() {
 function SignedIn({ uid }: { uid: string }) {
   const scheme = useColorScheme();
   useSync(uid);
+  useNotificationRouting(); // step 4: a tap on a notification opens its entrance
 
   return (
     // TanStack Query's cache (sync.ts) for every screen.

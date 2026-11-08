@@ -7,6 +7,7 @@ import { StatusChip } from '../../components/StatusChip';
 import { SyncChip } from '../../components/SyncChip';
 import { useEffect, useState } from 'react';
 import { currentUser } from '../../auth';
+import { mayNotify, notificationsWork, remindInOneMinute } from '../../notifications';
 import { markOpened, retryFailed, useBuilding, useEntrance, useField } from '../../store';
 import { tryToMovePin } from '../../supabaseRepositories';
 import { pushSurveys } from '../../sync';
@@ -26,6 +27,7 @@ export default function EntranceScreen() {
     useField.getState().openRecent(id);
   }, [id]);
   const [moved, setMoved] = useState<string | null>(null);
+  const [reminder, setReminder] = useState<string | null>(null);
   if (entrance === undefined) return null; // SQLite has not answered yet
   if (!entrance) {
     return <Text className="p-4 text-on-surface">No such entrance.</Text>;
@@ -104,6 +106,21 @@ export default function EntranceScreen() {
       >
         <Text className="font-bold text-on-primary">Survey</Text>
       </Pressable>
+      {/* Step 4: a local notification, set by the worker; its tap comes back here. */}
+      <Pressable
+        accessibilityRole="button"
+        onPress={async () => {
+          if (!notificationsWork) return setReminder('Reminders are phone-only: open the app on your phone.');
+          const no = await mayNotify();
+          if (no) return setReminder(no);
+          await remindInOneMinute(entrance.id, `${entrance.street} ${entrance.number}, ${entrance.entranceName}`);
+          setReminder(`Reminder set for ${new Date(Date.now() + 60_000).toLocaleTimeString()}.`);
+        }}
+        className="min-h-12 items-center justify-center self-stretch rounded-xl border-2 border-primary active:opacity-70"
+      >
+        <Text className="font-bold text-primary">Remind me in 1 minute</Text>
+      </Pressable>
+      {reminder ? <Text className="text-muted">{reminder}</Text> : null}
       <HereCard />
       <Text className="text-muted">
         Opened on this phone: {entrance.openedAt ? new Date(entrance.openedAt).toLocaleString() : 'never'}
