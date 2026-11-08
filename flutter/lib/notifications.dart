@@ -14,8 +14,12 @@ final notifications = FlutterLocalNotificationsPlugin();
 /// Step 5's pushes carry the same data; step 6 tests this function alone.
 String? routeForNotification(Map<String, dynamic> data) {
   final id = data['entranceId'];
-  return id is String && id.isNotEmpty ? '/entrances/$id' : null;
+  // Step 6: a push is data from outside the app, so only a UUID becomes a
+  // route ('../sign-in' or '<id>/survey' would open another screen).
+  return id is String && _uuid.hasMatch(id) ? '/entrances/$id' : null;
 }
+
+final _uuid = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);
 
 /// The payload travels as a string (JSON); a broken one goes nowhere.
 String? _routeFor(String? payload) {

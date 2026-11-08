@@ -64,19 +64,27 @@ class _SignInScreenState extends State<SignInScreen> {
           Text('Field app — sign in', style: Theme.of(context).textTheme.headlineSmall),
           Text('Your entrances, on and off the network.', style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 24),
-          TextField(
-            controller: _email,
-            decoration: const InputDecoration(labelText: 'Email'),
-            keyboardType: TextInputType.emailAddress,
-            autofillHints: const [AutofillHints.email],
+          // Step 6: Semantics identifiers are what Maestro finds (id: email…);
+          // a Flutter Key never reaches the accessibility tree.
+          Semantics(
+            identifier: 'email',
+            child: TextField(
+              controller: _email,
+              decoration: const InputDecoration(labelText: 'Email'),
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email],
+            ),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _password,
-            decoration: const InputDecoration(labelText: 'Password'),
-            obscureText: true,
-            autofillHints: const [AutofillHints.password],
-            onSubmitted: (_) => _run(signIn),
+          Semantics(
+            identifier: 'password',
+            child: TextField(
+              controller: _password,
+              decoration: const InputDecoration(labelText: 'Password'),
+              obscureText: true,
+              autofillHints: const [AutofillHints.password],
+              onSubmitted: (_) => _run(signIn),
+            ),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
@@ -87,9 +95,12 @@ class _SignInScreenState extends State<SignInScreen> {
             const Center(child: CircularProgressIndicator())
           else
             Column(children: [
-              FilledButton(
-                onPressed: () => _run(signIn),
-                child: const Text('Sign in'),
+              Semantics(
+                identifier: 'sign-in',
+                child: FilledButton(
+                  onPressed: () => _run(signIn),
+                  child: const Text('Sign in'),
+                ),
               ),
               const SizedBox(height: 12),
               OutlinedButton(

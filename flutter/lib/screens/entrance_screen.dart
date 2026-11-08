@@ -44,7 +44,10 @@ class EntranceScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('${e.street} ${e.number}', style: text.headlineSmall),
+          Semantics(
+            identifier: 'entrance-address', // step 6: what the Maestro flow checks
+            child: Text('${e.street} ${e.number}', style: text.headlineSmall),
+          ),
           Text(e.entranceName),
           Align(
             alignment: Alignment.centerLeft,
