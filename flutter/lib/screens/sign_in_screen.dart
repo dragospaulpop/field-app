@@ -59,18 +59,21 @@ class _SignInScreenState extends State<SignInScreen> {
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.all(24), children: [
           const SizedBox(height: 48),
+          Icon(Icons.apartment, size: 48, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 8),
           Text('Field app — sign in', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 16),
+          Text('Your entrances, on and off the network.', style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 24),
           TextField(
             controller: _email,
-            decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
+            decoration: const InputDecoration(labelText: 'Email'),
             keyboardType: TextInputType.emailAddress,
             autofillHints: const [AutofillHints.email],
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _password,
-            decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
+            decoration: const InputDecoration(labelText: 'Password'),
             obscureText: true,
             autofillHints: const [AutofillHints.password],
             onSubmitted: (_) => _run(signIn),
@@ -83,11 +86,12 @@ class _SignInScreenState extends State<SignInScreen> {
           if (_busy)
             const Center(child: CircularProgressIndicator())
           else
-            Wrap(spacing: 12, children: [
+            Column(children: [
               FilledButton(
                 onPressed: () => _run(signIn),
                 child: const Text('Sign in'),
               ),
+              const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: () => _run(signUp),
                 child: const Text('Create account'),

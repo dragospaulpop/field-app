@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../contract/contract.dart';
 import '../providers.dart';
 import '../sync.dart';
+import '../theme/app_theme.dart';
 
 final _syncProvider = StreamProvider.family<({SyncState state, String? lastError})?, String>(
   (ref, id) => ref.watch(databaseProvider).watchSync(id),
@@ -21,17 +22,8 @@ class SyncChip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(_syncProvider(entranceId)).value;
     if (s == null) return const SizedBox.shrink();
-    final (label, color) = switch (s.state) {
-      SyncState.pending => ('Waiting to send', const Color(0xFFB45309)),
-      SyncState.synced => ('Synced', const Color(0xFF15803D)),
-      SyncState.failed => ('Refused', const Color(0xFFDC2626)),
-    };
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Chip(
-        visualDensity: VisualDensity.compact,
-        backgroundColor: color,
-        label: Text(label, style: const TextStyle(color: Colors.white)),
-      ),
+      SyncBadge(state: s.state),
       if (s.lastError case final why?) Text(why, style: Theme.of(context).textTheme.bodySmall),
       if (s.state == SyncState.failed)
         TextButton(
@@ -42,5 +34,24 @@ class SyncChip extends ConsumerWidget {
           child: const Text('Retry'),
         ),
     ]);
+  }
+}
+
+/// The one place that knows what a sync state looks like (step 2): the word,
+/// the icon and the pair from the theme's SyncColors.
+class SyncBadge extends StatelessWidget {
+  const SyncBadge({super.key, required this.state});
+
+  final SyncState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = Theme.of(context).extension<SyncColors>()!.of(state);
+    final (label, icon) = switch (state) {
+      SyncState.pending => ('Waiting to send', Icons.schedule_send_outlined),
+      SyncState.synced => ('Synced', Icons.cloud_done_outlined),
+      SyncState.failed => ('Refused', Icons.error_outline),
+    };
+    return Pill(label: label, icon: icon, bg: bg, fg: fg);
   }
 }

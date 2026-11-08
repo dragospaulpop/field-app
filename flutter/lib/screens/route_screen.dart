@@ -58,8 +58,7 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
                       if (e == null) return const SizedBox.shrink(); // SQLite not read yet
                       return Card(
                         child: ListTile(
-                          leading: Text('${stops[i].order}',
-                              style: Theme.of(context).textTheme.titleLarge),
+                          leading: CircleAvatar(child: Text('${stops[i].order}')),
                           title: Text('${e.street} ${e.number}'),
                           subtitle: Text(e.entranceName),
                           trailing: StatusChip(status: e.surveyStatus),

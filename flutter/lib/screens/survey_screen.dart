@@ -148,7 +148,7 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
           {TextInputType? keyboard}) =>
       TextFormField(
         controller: _text[key],
-        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+        decoration: InputDecoration(labelText: label),
         keyboardType: keyboard,
         autovalidateMode: AutovalidateMode.onUserInteraction,
         validator: validator,
@@ -201,7 +201,6 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
               if (_ruleErrors['correctedLng'] != null) _ruleError('correctedLng')!,
               const SizedBox(height: 8),
               OutlinedButton(
-                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
                 onPressed: () async {
                   final fix = await locate(context, ref);
                   if (fix == null) return;
@@ -238,13 +237,12 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
             ),
             TextFormField(
               controller: _text['comment'],
-              decoration: const InputDecoration(labelText: 'Comment', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Comment'),
               maxLines: 4,
               validator: validateFreeText,
             ),
             gap,
             FilledButton(
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
               onPressed: _submit,
               child: const Text('Submit survey'),
             ),

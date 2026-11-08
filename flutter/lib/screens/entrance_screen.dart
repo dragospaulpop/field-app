@@ -67,7 +67,6 @@ class EntranceScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           FilledButton(
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
             onPressed: () => context.push('/entrances/${e.id}/survey'),
             child: const Text('Survey'),
           ),

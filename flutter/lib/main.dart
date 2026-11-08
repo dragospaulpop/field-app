@@ -7,6 +7,7 @@ import 'auth.dart';
 import 'db/database.dart';
 import 'providers.dart';
 import 'session.dart';
+import 'theme/app_theme.dart';
 
 import 'screens/building_screen.dart';
 import 'screens/entrance_screen.dart';
@@ -98,9 +99,9 @@ final _router = GoRouter(
   ],
 );
 
-const _seed = Color(0xFFC2410C);
-final _light = ThemeData(colorSchemeSeed: _seed, brightness: Brightness.light);
-final _dark = ThemeData(colorSchemeSeed: _seed, brightness: Brightness.dark);
+// Step 2: the theme lives in theme/app_theme.dart, one ThemeData per brightness.
+final _light = buildTheme(Brightness.light);
+final _dark = buildTheme(Brightness.dark);
 
 /// The auth-state gate: no user, no app. Signing in or out rebuilds this.
 class FieldApp extends ConsumerWidget {
