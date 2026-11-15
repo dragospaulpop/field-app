@@ -143,7 +143,10 @@ class _SyncScopeState extends ConsumerState<SyncScope> {
     // phone. listenManual keeps the provider alive while this widget lives.
     ref.listenManual(myPinsProvider, (_, next) {
       final pins = next.value;
-      if (pins != null) ref.read(databaseProvider).savePins(pins);
+      // An empty answer is also what row level security returns when it hides
+      // every row: never read it as "all my pins are gone". (A real "none left"
+      // waits for the next pull that brings a pin.)
+      if (pins != null && pins.isNotEmpty) ref.read(databaseProvider).savePins(pins);
     }, fireImmediately: true);
   }
 
