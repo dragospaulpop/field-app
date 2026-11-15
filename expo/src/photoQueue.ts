@@ -171,6 +171,9 @@ export async function drainQueue() {
   if (running) return;
   running = true;
   try {
+    // No usable token (offline, expired; auth.ts's liveSession): Storage would refuse
+    // an anon upload. The photos stay pending; sync.ts drains again on a renewal.
+    if (!(await supabase.auth.getSession()).data.session) return;
     while (await mayUpload(cellularSetting.get())) {
       const batch = await db
         .select()
