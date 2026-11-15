@@ -15,6 +15,13 @@
       "when": 1792408888842,
       "tag": "0001_opened-at",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793637579501,
+      "tag": "0002_photo-queue",
+      "breakpoints": true
     }
   ]
 }

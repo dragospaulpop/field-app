@@ -4,8 +4,12 @@ import type { Entrance } from '../../contract/contract';
 import { HereCard } from '../../components/HereCard';
 import { Photos } from '../../components/Photos';
 import { StatusChip } from '../../components/StatusChip';
-import { useEffect } from 'react';
-import { markOpened, useBuilding, useEntrance, useField } from '../../store';
+import { SyncChip } from '../../components/SyncChip';
+import { useEffect, useState } from 'react';
+import { currentUser } from '../../auth';
+import { markOpened, retryFailed, useBuilding, useEntrance, useField } from '../../store';
+import { tryToMovePin } from '../../supabaseRepositories';
+import { pushSurveys } from '../../sync';
 import { fromWire, toWire } from '../../wire';
 import { useColors } from '../../theme';
 
@@ -23,6 +27,7 @@ export default function EntranceScreen() {
     useField.getState().openRecent(id);
   }, [id]);
   const colors = useColors();
+  const [moved, setMoved] = useState<string | null>(null);
   if (entrance === undefined) return null; // SQLite has not answered yet
   if (!entrance) {
     return <Text style={{ color: colors.text, padding: 16 }}>No such entrance.</Text>;
@@ -55,10 +60,34 @@ export default function EntranceScreen() {
           {building?.label ?? 'Building'} · every entrance ›
         </Text>
       </Pressable>
-      <StatusChip status={entrance.surveyStatus} />
+      <View style={styles.chips}>
+        <StatusChip status={entrance.surveyStatus} />
+        <SyncChip state={entrance.syncState} />
+      </View>
+      {entrance.lastError ? <Text style={{ color: colors.text }}>{entrance.lastError}</Text> : null}
+      {entrance.syncState === 'failed' && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => retryFailed(entrance.id).then(() => pushSurveys(currentUser()?.id ?? ''))}
+          style={styles.link}
+        >
+          <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
+        </Pressable>
+      )}
       <Text style={{ color: colors.muted }}>
         Office pin: {entrance.lat.toFixed(5)}, {entrance.lng.toFixed(5)}
       </Text>
+      {/* Step 3's check, dev builds only: the pin's place is the office's column. */}
+      {__DEV__ && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => tryToMovePin(entrance.id, entrance.lat + 0.0001).then(setMoved)}
+          style={styles.link}
+        >
+          <Text style={{ color: colors.primary, fontWeight: '600' }}>Dev: try to move this pin</Text>
+        </Pressable>
+      )}
+      {moved ? <Text style={{ color: colors.muted }}>{moved}</Text> : null}
       {building?.comment ? (
         <Text style={{ color: colors.text }}>Office note: {building.comment}</Text>
       ) : null}
@@ -94,6 +123,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 12, alignItems: 'flex-start' },
   h1: { fontSize: 24, fontWeight: '700' },
   link: { minHeight: 44, justifyContent: 'center' },
+  chips: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   table: { alignSelf: 'stretch', borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   value: { flexShrink: 1, textAlign: 'right', fontWeight: '600' },

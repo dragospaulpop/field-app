@@ -1,48 +1,45 @@
 import { skipToken, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { pins } from '../cloud';
+import { currentUser } from '../auth';
 import type { Entrance } from '../contract/contract';
-import { entrances as fixtureEntrances } from '../contract/fixtures';
-import { auth } from '../firebase';
-import { useOutbox } from '../store';
+import { useQueue } from '../photoQueue';
+import { retryFailed, useOutbox } from '../store';
 import { myPinsKey, pushSurveys } from '../sync';
 import { useColors } from '../theme';
 
 /** The banner's sync line: what the cloud has, what waits to be sent. */
 export function SyncBar() {
   const colors = useColors();
-  const uid = auth.currentUser?.uid ?? '';
-  const [seeded, setSeeded] = useState<string | null>(null);
-  // No queryFn: the listener fills this cache entry (setQueryData in sync.ts).
+  const uid = currentUser()?.id ?? '';
+  // No queryFn: the pull fills this cache entry (setQueryData in sync.ts).
   const box = useOutbox();
+  const queue = useQueue(); // photos not uploaded yet
   const cloud = useQuery<Entrance[]>({ queryKey: myPinsKey(uid), queryFn: skipToken });
-
-  // Dev only: until the office side exists (week 7), the contract's fixtures
-  // become my pins. __DEV__ is false in a release build: the button disappears.
-  const seed = async () => {
-    setSeeded('Seeding…');
-    const { created, refused } = await pins.seed(uid, fixtureEntrances);
-    setSeeded(`${created} pins are yours · ${refused} already someone else's`);
-  };
 
   return (
     <View style={styles.row}>
       <Text style={{ color: colors.muted, fontSize: 12 }}>
-        {cloud.data ? `cloud: ${cloud.data.length} pins, live` : 'cloud: connecting…'}
+        {cloud.data ? `cloud: ${cloud.data.length} pins` : 'cloud: connecting…'}
       </Text>
-      {__DEV__ && cloud.data?.length === 0 && (
-        <Pressable accessibilityRole="button" onPress={seed}>
-          <Text style={[styles.link, { color: colors.primary }]}>Seed my pins</Text>
-        </Pressable>
+      {/* A phone cannot make pins (no insert grant): the office assigns them, in SQL (step 1). */}
+      {cloud.data?.length === 0 && (
+        <Text style={{ color: colors.muted, fontSize: 12 }}>no pins yet: ask the office to assign some</Text>
       )}
-      {seeded && <Text style={{ color: colors.muted, fontSize: 12 }}>{seeded}</Text>}
       <Text style={{ color: colors.muted, fontSize: 12 }}>
-        {box.pending} to send · {box.failed} refused
+        {box.pending} to send · {box.failed} refused · {box.lost} ignored
       </Text>
       <Pressable accessibilityRole="button" onPress={() => pushSurveys(uid)}>
         <Text style={[styles.link, { color: colors.primary }]}>Sync now</Text>
       </Pressable>
+      {box.failed > 0 && (
+        <Pressable accessibilityRole="button" onPress={() => retryFailed().then(() => pushSurveys(uid))}>
+          <Text style={[styles.link, { color: colors.primary }]}>Retry all</Text>
+        </Pressable>
+      )}
+      <Text style={{ color: colors.muted, fontSize: 12 }}>
+        photos: {queue.filter((q) => q.state !== 'failed').length} waiting ·{' '}
+        {queue.filter((q) => q.state === 'failed').length} failed
+      </Text>
       {box.lastError && <Text style={styles.error}>last refusal: {box.lastError}</Text>}
     </View>
   );
