@@ -2,9 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'contract/contract.dart';
 import 'db/database.dart';
-import 'firebase_repositories.dart';
 import 'repositories.dart';
 import 'store.dart';
+import 'supabase_repositories.dart';
 
 // Riverpod replaces week 2's StoreScope: every widget that needs something
 // asks for its provider with ref.watch(…) and rebuilds when it changes.
@@ -16,12 +16,12 @@ final fixturesProvider = Provider<Fixtures>((ref) => throw UnimplementedError())
 /// The open database, also given in main().
 final databaseProvider = Provider<AppDatabase>((ref) => throw UnimplementedError());
 
-/// The one place that chooses the implementation. Week 5 changes these two.
-final pinsRepositoryProvider = Provider<PinsRepository>((ref) => FirebasePinsRepository());
-final surveysRepositoryProvider = Provider<SurveysRepository>((ref) => FirebaseSurveysRepository());
+/// The one place that chooses the implementation: week 5 changed these two lines.
+final pinsRepositoryProvider = Provider<PinsRepository>((ref) => SupabasePinsRepository());
+final surveysRepositoryProvider = Provider<SurveysRepository>((ref) => SupabaseSurveysRepository());
 
-/// The contract's user id for the fixtures (routes, messages). Firebase's uid
-/// is not a UUID, so SQLite keeps this one; the survey sent carries the uid.
+/// The contract's user id for the fixtures (routes, messages), which still
+/// name the fixtures' users. The survey sent carries the signed-in user's id.
 final meProvider = Provider<String>((ref) => ref.watch(fixturesProvider).me);
 
 // The data lives in SQLite; drift's watch() streams become StreamProviders.

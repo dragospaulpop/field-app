@@ -6,12 +6,13 @@ import { Text, useColorScheme, View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SignIn } from '../components/SignIn';
 import { openDb } from '../db/db';
-import { useUser } from '../firebase';
+import { useSession } from '../auth';
+import { configError } from '../supabase';
 import { queryClient, useSync } from '../sync';
 
 export default function RootLayout() {
   const [state, setState] = useState<'opening' | 'ready' | Error>('opening');
-  const user = useUser();
+  const session = useSession();
   useEffect(() => {
     openDb().then(
       () => setState('ready'),
@@ -19,6 +20,13 @@ export default function RootLayout() {
     );
   }, []);
 
+  if (configError) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
+        <Text>{configError}</Text>
+      </View>
+    );
+  }
   if (state instanceof Error) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
@@ -26,10 +34,10 @@ export default function RootLayout() {
       </View>
     );
   }
-  if (state === 'opening' || user === undefined) return null; // a few milliseconds
+  if (state === 'opening' || session === undefined) return null; // a few milliseconds
   // The auth-state gate: no user, no app. Signing in re-renders this layout.
-  if (user === null) return <SignIn />;
-  return <SignedIn uid={user.uid} />;
+  if (session === null) return <SignIn />;
+  return <SignedIn uid={session.user.id} />;
 }
 
 /** Everything behind the gate: the sync runs while this is on screen. */

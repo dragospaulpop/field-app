@@ -1,0 +1,8 @@
+# The Supabase CLI's settings for this repo. `supabase config push` sends
+# only what this file declares to the hosted project; the rest stays as it is.
+project_id = "field-app"
+
+[auth.email]
+# Sign up and sign in at once, without a confirmation email (the free plan
+# sends only a few emails an hour, and our test users have no inbox).
+enable_confirmations = false

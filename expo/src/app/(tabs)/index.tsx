@@ -3,14 +3,14 @@ import { Redirect, router } from 'expo-router';
 import { useNetworkState } from 'expo-network';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { signOut } from 'firebase/auth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EntranceMap } from '../../components/EntranceMap';
 import { SyncBar } from '../../components/SyncBar';
-import { auth } from '../../firebase';
+import { currentUser } from '../../auth';
 import { locate } from '../../location';
 import { lastTab } from '../../session';
 import { addMissedEntrance, useEntrances, useField } from '../../store';
+import { safeSignOut } from '../../sync';
 import { useColors } from '../../theme';
 
 // Read once per launch: the tab the app was closed on (the web keeps its URL instead).
@@ -22,6 +22,7 @@ export default function MapScreen() {
   const entrances = useEntrances();
   const done = entrances.filter((e) => e.surveyStatus !== 'not_started').length;
   const [busy, setBusy] = useState(false);
+  const [signOutNote, setSignOutNote] = useState<string | null>(null);
   const network = useNetworkState();
   const recent = useField((s) => s.recent); // exercise 5
   // isInternetReachable is null until the phone has checked; then true or false.
@@ -69,11 +70,12 @@ export default function MapScreen() {
               {online ? `Online · ${network.type ?? '…'}` : 'Offline — saved on the phone'}
             </Text>
           </View>
-          <Text style={{ color: colors.muted, fontSize: 12 }}>{auth.currentUser?.email}</Text>
-          <Pressable accessibilityRole="button" onPress={() => signOut(auth)}>
+          <Text style={{ color: colors.muted, fontSize: 12 }}>{currentUser()?.email}</Text>
+          <Pressable accessibilityRole="button" onPress={() => safeSignOut().then(setSignOutNote)}>
             <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>Sign out</Text>
           </Pressable>
         </View>
+        {signOutNote && <Text style={{ color: '#dc2626', fontSize: 12 }}>{signOutNote}</Text>}
         <SyncBar />
       </View>
       <Pressable
