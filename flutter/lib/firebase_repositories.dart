@@ -10,7 +10,11 @@ class FirebasePinsRepository implements PinsRepository {
   Stream<List<Entrance>> watchMine(String uid) => _pins
       // The query asks for exactly what the rules allow: my pins, and only mine.
       .where('assignedTo', isEqualTo: uid)
-      .snapshots()
+      // Also the snapshots where only the metadata changes: the server confirming the cache.
+      .snapshots(includeMetadataChanges: true)
+      // From the cache (offline, or before the server answered): maybe stale or
+      // incomplete, never "all my pins". The pull would delete every row it lacks.
+      .where((snap) => !snap.metadata.isFromCache)
       .map((snap) => [
             for (final d in snap.docs) Entrance.fromJson(d.data()..remove('assignedTo')),
           ]);
