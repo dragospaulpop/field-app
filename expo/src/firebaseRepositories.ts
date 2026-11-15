@@ -9,13 +9,19 @@ export const firebasePins: PinsRepository = {
     const mine = query(collection(firestore, 'pins'), where('assignedTo', '==', uid));
     return onSnapshot(
       mine,
-      (snap) =>
+      // Also the snapshots where only the metadata changes: the server confirming the cache.
+      { includeMetadataChanges: true },
+      (snap) => {
+        // From the cache (offline, or before the server answered): maybe stale or
+        // incomplete, never "all my pins". The pull would delete every row it lacks.
+        if (snap.metadata.fromCache) return;
         onPins(
           snap.docs.map((d) => {
             const { assignedTo: _, ...entrance } = d.data();
             return entrance as Entrance;
           }),
-        ),
+        );
+      },
       onError,
     );
   },
