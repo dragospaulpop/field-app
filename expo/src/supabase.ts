@@ -9,6 +9,9 @@ import { AppState, Platform } from 'react-native';
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const key = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
+/** Where the session is kept on the phone (localStorage): auth.ts reads it when offline. */
+export const SESSION_KEY = 'field-app-session';
+
 /** Not null when expo/.env is missing: the root layout shows it instead of a blank screen. */
 export const configError =
   url && key
@@ -22,6 +25,7 @@ export const supabase = createClient(
   {
     auth: {
       storage: localStorage, // keep the session across restarts...
+      storageKey: SESSION_KEY, // ...under our own name
       autoRefreshToken: true, // ...and renew the access token before it expires
       persistSession: true,
       detectSessionInUrl: false, // a phone has no #access_token in a URL

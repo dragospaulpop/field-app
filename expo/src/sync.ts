@@ -1,11 +1,11 @@
 import { QueryClient } from '@tanstack/react-query';
-import { addNetworkStateListener } from 'expo-network';
+import { addNetworkStateListener, getNetworkStateAsync } from 'expo-network';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { pins, surveys } from './cloud';
 import { drainQueue, resetUploading, waitingPhotos } from './photoQueue';
 import { type Entrance, EntranceSurvey } from './contract/contract';
-import { signOut } from './auth';
+import { liveSession, onTokenRefreshed, signOut } from './auth';
 import { LOST, markSent, outbox, savePins, unsentSurveys } from './store';
 
 /** Server state: what the cloud says right now. Screens still read SQLite. */
@@ -24,7 +24,10 @@ export function useSync(uid: string) {
       uid,
       (list: Entrance[]) => {
         queryClient.setQueryData(myPinsKey(uid), list);
-        savePins(list).catch((e) => console.warn('savePins', e));
+        // An empty answer is also what row level security returns when it hides every
+        // row: never read it as "all my pins are gone". (A real "none left" waits for
+        // the next pull that brings a pin.)
+        if (list.length > 0) savePins(list).catch((e) => console.warn('savePins', e));
       },
       (e) => console.warn('pins pull', e),
     );
@@ -32,7 +35,8 @@ export function useSync(uid: string) {
   }, [uid]);
 
   // The push, at three moments: now, when the app comes back to the
-  // foreground, and when the network comes back. (And on "Sync now".)
+  // foreground, and when the network comes back. (And on "Sync now".) Also when
+  // the token is renewed: without a live one the push waits (pushSurveys).
   // Step 4: the photo queue at the same moments (after a restart, uploads left
   // half-done start again from zero).
   useEffect(() => {
@@ -50,9 +54,11 @@ export function useSync(uid: string) {
         drainQueue();
       }
     });
+    const refreshed = onTokenRefreshed(() => pushSurveys(uid));
     return () => {
       foreground.remove();
       network.remove();
+      refreshed.unsubscribe();
     };
   }, [uid]);
 }
@@ -69,6 +75,9 @@ export async function pushSurveys(uid: string) {
   if (pushing) return; // one push at a time
   pushing = true;
   try {
+    // No usable token (offline, expired): the request would go as anon and be refused.
+    // The surveys stay pending; onTokenRefreshed (above) pushes again.
+    if (!(await liveSession())) return;
     for (const e of await outbox()) {
       // The contract's survey schema picks the surveyed fields (and checks them).
       const checked = EntranceSurvey.safeParse(e);
@@ -119,6 +128,22 @@ export async function safeSignOut(): Promise<string | null> {
   if (n > 0) return `${n} ${n === 1 ? 'survey' : 'surveys'} not sent yet: Sync now first.`;
   const p = await waitingPhotos(); // step 4: the photo queue is the phone's too
   if (p > 0) return `${p} ${p === 1 ? 'photo' : 'photos'} not uploaded yet: wait for them, or Retry.`;
-  await signOut();
+  try {
+    await signOut();
+  } catch {
+    return noTokenYet(); // no usable token (offline, or still being renewed): still signed in
+  }
   return null;
+}
+
+/**
+ * Why there is no usable token: offline, or back online while the client is still
+ * renewing an expired one (up to about a minute and a half). The home banner's
+ * test, so the sentence never says "network" while the banner says Online.
+ */
+async function noTokenYet() {
+  const s = await getNetworkStateAsync();
+  return s.isConnected !== false && s.isInternetReachable !== false
+    ? 'Your sign-in is still being renewed: sign out again in a minute.'
+    : 'Signing out needs the network.';
 }
