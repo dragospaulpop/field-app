@@ -54,7 +54,10 @@ export function useSync(uid: string) {
         drainQueue();
       }
     });
-    const refreshed = onTokenRefreshed(() => pushSurveys(uid));
+    const refreshed = onTokenRefreshed(() => {
+      pushSurveys(uid);
+      drainQueue();
+    });
     return () => {
       foreground.remove();
       network.remove();
