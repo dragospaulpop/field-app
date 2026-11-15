@@ -63,7 +63,7 @@ export const supabasePins: PinsRepository = {
   watchMine(uid, onPins, onError) {
     // Firestore pushed every change; Postgres answers when asked. So the app asks
     // now, and on refresh(): after every push (start, foreground, network back,
-    // Sync now). Realtime, which pushes, is the stretch moon of this step.
+    // Sync now). Week 6, step 3 adds Realtime (realtime.ts): a knock that runs this pull.
     const pull = async () => {
       // RLS already limits this to my rows: the filter states the intent and uses the index.
       const { data, error } = await supabase.from('entrances').select('*').eq('assigned_to', uid);

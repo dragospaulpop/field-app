@@ -61,7 +61,7 @@ export function Photos({ entranceId }: { entranceId: string }) {
       ) : null}
       {list.map((p) => (
         <View key={p.id} style={styles.photo}>
-          <Image source={{ uri: p.localUri }} style={styles.thumb} accessibilityLabel="Entrance photo" />
+          <Image source={{ uri: p.localUri }} style={[styles.thumb, { backgroundColor: colors.border }]} accessibilityLabel="Entrance photo" />
           <View style={styles.meta}>
             <Text style={{ color: colors.text }}>{new Date(p.takenAt).toLocaleString()}</Text>
             <Text style={{ color: colors.muted }}>
@@ -110,6 +110,6 @@ const styles = StyleSheet.create({
   button: { flex: 1, minHeight: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   outline: { borderWidth: 2 },
   photo: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-  thumb: { width: 72, height: 72, borderRadius: 8, backgroundColor: '#00000022' },
+  thumb: { width: 72, height: 72, borderRadius: 8 },
   meta: { flex: 1, gap: 2 },
 });

@@ -1,0 +1,69 @@
+@import 'tailwindcss';
+@import 'uniwind';
+
+/*
+ * Week 6, step 2: the app's one theme file. Screens say what a color is FOR
+ * (bg-surface, text-muted, bg-pending-bg), never which color it is; this file
+ * says it once for light and once for dark. No hex color anywhere else.
+ * Contrast (WCAG 2.2, text on its background) was computed for every pair:
+ * the table is in the step's page.
+ */
+@layer theme {
+  :root {
+    @variant light {
+      --color-background: #ffffff;
+      --color-surface: #f3f4f6;
+      --color-on-surface: #111827;
+      --color-muted: #4b5563;
+      --color-border: #d1d5db;
+      --color-primary: #c2410c;
+      --color-on-primary: #ffffff;
+      --color-error: #b91c1c;
+
+      /* The three sync states: text on a tint, named by meaning. */
+      --color-pending: #7a4b00;
+      --color-pending-bg: #fff1d6;
+      --color-synced: #14532d;
+      --color-synced-bg: #dcfce7;
+      --color-failed: #9b1c1c;
+      --color-failed-bg: #fee2e2;
+
+      /* The office's survey status, the same way. */
+      --color-todo: #374151;
+      --color-todo-bg: #e5e7eb;
+      --color-progress: #1e40af;
+      --color-progress-bg: #dbeafe;
+      --color-done: #166534;
+      --color-done-bg: #dcfce7;
+      --color-rework: #9b1c1c;
+      --color-rework-bg: #fee2e2;
+    }
+
+    @variant dark {
+      --color-background: #0b0f17;
+      --color-surface: #1f2937;
+      --color-on-surface: #f9fafb;
+      --color-muted: #9ca3af;
+      --color-border: #374151;
+      --color-primary: #fb923c;
+      --color-on-primary: #111827;
+      --color-error: #f87171;
+
+      --color-pending: #ffd28a;
+      --color-pending-bg: #3a2a08;
+      --color-synced: #86efac;
+      --color-synced-bg: #052e16;
+      --color-failed: #fca5a5;
+      --color-failed-bg: #450a0a;
+
+      --color-todo: #e5e7eb;
+      --color-todo-bg: #374151;
+      --color-progress: #bfdbfe;
+      --color-progress-bg: #1e3a8a;
+      --color-done: #bbf7d0;
+      --color-done-bg: #14532d;
+      --color-rework: #fecaca;
+      --color-rework-bg: #7f1d1d;
+    }
+  }
+}

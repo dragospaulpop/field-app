@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { pins, surveys } from './cloud';
 import { drainQueue, resetUploading, waitingPhotos } from './photoQueue';
+import { forgetPushToken } from './notifications';
+import { watchEntrances } from './realtime';
 import { type Entrance, EntranceSurvey } from './contract/contract';
 import { liveSession, onTokenRefreshed, signOut } from './auth';
 import { LOST, markSent, outbox, savePins, unsentSurveys } from './store';
@@ -32,6 +34,33 @@ export function useSync(uid: string) {
       (e) => console.warn('pins pull', e),
     );
     return stop; // signing out unmounts the hook: the listener stops
+  }, [uid]);
+
+  // Step 3: the office's changes, at once. Realtime knocks, the pull answers.
+  // In the background the channel is left (a phone suspends its socket anyway);
+  // back in the foreground it joins again (after the leave has finished: until
+  // then the client hands back the leaving channel), and the join runs a pull.
+  useEffect(() => {
+    let leave: (() => Promise<unknown>) | null = null;
+    let left: Promise<unknown> = Promise.resolve();
+    let closed = false;
+    const join = () =>
+      left.then(() => {
+        if (!closed && !leave) leave = watchEntrances(uid, () => pins.refresh());
+      });
+    join();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') join();
+      else if (state === 'background' && leave) {
+        left = leave();
+        leave = null;
+      }
+    });
+    return () => {
+      closed = true;
+      sub.remove();
+      leave?.();
+    };
   }, [uid]);
 
   // The push, at three moments: now, when the app comes back to the
@@ -131,6 +160,10 @@ export async function safeSignOut(): Promise<string | null> {
   if (n > 0) return `${n} ${n === 1 ? 'survey' : 'surveys'} not sent yet: Sync now first.`;
   const p = await waitingPhotos(); // step 4: the photo queue is the phone's too
   if (p > 0) return `${p} ${p === 1 ? 'photo' : 'photos'} not uploaded yet: wait for them, or Retry.`;
+  // Step 5: this phone's push address goes first, while the delete is still allowed.
+  if (!(await liveSession())) return noTokenYet(); // the delete would go as anon
+  const kept = await forgetPushToken();
+  if (kept) return kept;
   try {
     await signOut();
   } catch {

@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { Redirect, router } from 'expo-router';
 import { useNetworkState } from 'expo-network';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EntranceMap } from '../../components/EntranceMap';
 import { SyncBar } from '../../components/SyncBar';
@@ -11,14 +11,12 @@ import { locate } from '../../location';
 import { lastTab } from '../../session';
 import { addMissedEntrance, useEntrances, useField } from '../../store';
 import { safeSignOut } from '../../sync';
-import { useColors } from '../../theme';
 
 // Read once per launch: the tab the app was closed on (the web keeps its URL instead).
 let reopen = Platform.OS === 'web' ? null : lastTab.get();
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
-  const colors = useColors();
   const entrances = useEntrances();
   const done = entrances.filter((e) => e.surveyStatus !== 'not_started').length;
   const [busy, setBusy] = useState(false);
@@ -49,33 +47,31 @@ export default function MapScreen() {
   reopen = null;
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+    <View className="flex-1 bg-background">
       <EntranceMap />
-      {/* No header on this tab: the banner keeps clear of the notch itself. */}
+      {/* No header on this tab: the banner keeps clear of the notch itself (a value, so a style). */}
       <View
-        style={[
-          styles.banner,
-          { top: insets.top + 8, backgroundColor: colors.card },
-        ]}
+        style={{ top: insets.top + 8 }}
+        className="absolute left-4 right-4 items-center rounded-xl border border-border bg-surface p-3 dark:border-transparent"
       >
-        <Text style={{ color: colors.text, fontWeight: '600' }}>
+        <Text className="font-semibold text-on-surface">
           {entrances.length} entrances · {done} surveyed
         </Text>
-        <Text style={{ color: colors.muted, fontSize: 12 }}>
+        <Text className="text-xs text-muted">
           Recently opened: {recent.length === 0 ? 'none' : recent.map((id) => entrances.find((e) => e.id === id)?.entranceName ?? '?').join(', ')}
         </Text>
-        <View style={styles.chips}>
-          <View style={[styles.chip, { backgroundColor: online ? '#16a34a' : '#6b7280' }]}>
-            <Text style={styles.chipText}>
+        <View className="mt-1.5 flex-row items-center gap-2">
+          <View className={`rounded-full px-2.5 py-0.5 ${online ? 'bg-synced-bg' : 'bg-todo-bg'}`}>
+            <Text className={`text-xs font-semibold ${online ? 'text-synced' : 'text-todo'}`}>
               {online ? `Online · ${network.type ?? '…'}` : 'Offline — saved on the phone'}
             </Text>
           </View>
-          <Text style={{ color: colors.muted, fontSize: 12 }}>{currentUser()?.email}</Text>
+          <Text className="text-xs text-muted">{currentUser()?.email}</Text>
           <Pressable accessibilityRole="button" onPress={() => safeSignOut().then(setSignOutNote)}>
-            <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>Sign out</Text>
+            <Text className="text-xs font-semibold text-primary">Sign out</Text>
           </Pressable>
         </View>
-        {signOutNote && <Text style={{ color: '#dc2626', fontSize: 12 }}>{signOutNote}</Text>}
+        {signOutNote && <Text className="text-xs text-error">{signOutNote}</Text>}
         <SyncBar />
       </View>
       <Pressable
@@ -83,37 +79,12 @@ export default function MapScreen() {
         accessibilityLabel="Add a building that is not on the map, here"
         disabled={busy}
         onPress={addMissed}
-        style={[styles.fab, { backgroundColor: colors.primary, opacity: busy ? 0.6 : 1 }]}
+        className={`absolute bottom-8 right-4 min-h-13 justify-center rounded-full bg-primary px-4.5 shadow-md dark:shadow-none ${busy ? 'opacity-60' : ''}`}
       >
-        <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>
+        <Text className="font-bold text-on-primary">
           {busy ? 'Finding you…' : '+ Missed building'}
         </Text>
       </Pressable>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  chips: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
-  chip: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999 },
-  chipText: { color: '#ffffff', fontSize: 12, fontWeight: '600' },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    bottom: 32,
-    minHeight: 52,
-    paddingHorizontal: 18,
-    borderRadius: 26,
-    justifyContent: 'center',
-    elevation: 4,
-  },
-  banner: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    padding: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-});

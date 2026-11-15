@@ -17,7 +17,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "ro.rau.field_app"
+      "package": "ro.rau.field_app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -42,7 +43,17 @@
           "locationWhenInUsePermission": "The field app tags your photos and new pins with where you stand."
         }
       ],
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      "expo-notifications",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraProguardRules": "-keep class * extends androidx.room.RoomDatabase { <init>(); }"
+          }
+        }
+      ],
+      "./plugins/withReleaseSigning"
     ],
     "scheme": "fieldapp"
   }

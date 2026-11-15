@@ -42,3 +42,6 @@ yarn-error.*
 
 # Your Supabase project's URL and key (week 5, step 1): yours, never committed
 .env
+
+# Your Firebase project's Android config (week 6, step 5): yours, never committed
+google-services.json
