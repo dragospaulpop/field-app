@@ -13,7 +13,7 @@ import '../location.dart';
 import '../providers.dart';
 import '../session.dart';
 import '../sync.dart';
-import 'status_chip.dart';
+import '../theme/app_theme.dart';
 import 'sync_bar.dart';
 
 // OpenStreetMap's public tiles, weeks 2–4. Week 5 swaps this one constant for
@@ -33,6 +33,7 @@ class MapScreen extends ConsumerWidget {
     final names = {for (final e in entrances) e.id: e.entranceName};
     final done =
         entrances.where((e) => e.surveyStatus != SurveyStatus.not_started).length;
+    final sync = Theme.of(context).extension<SyncColors>()!; // the theme's tokens (step 2)
     return Stack(
       children: [
         FlutterMap(
@@ -56,8 +57,7 @@ class MapScreen extends ConsumerWidget {
                       label: '${e.street} ${e.number}, ${e.entranceName}',
                       child: GestureDetector(
                         onTap: () => context.push('/entrances/${e.id}'),
-                        child: Icon(Icons.location_on,
-                            size: 40, color: statusColor[e.surveyStatus]),
+                        child: _Pin(look: statusLook(Theme.of(context).colorScheme, e.surveyStatus)),
                       ),
                     ),
                   ),
@@ -79,19 +79,17 @@ class MapScreen extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Text('${entrances.length} entrances · $done surveyed',
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                        style: Theme.of(context).textTheme.titleSmall),
                     Text('Recently opened: ${recent.isEmpty ? 'none' : recent.map((id) => names[id] ?? '?').join(', ')}',
                         style: Theme.of(context).textTheme.bodySmall),
                     const SizedBox(height: 6),
                     // Wrap, not Row: the contract has its own Row (the base of every entity).
                     Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-                      Chip(
-                        visualDensity: VisualDensity.compact,
-                        backgroundColor: online ? const Color(0xFF16A34A) : const Color(0xFF6B7280),
-                        label: Text(
-                          online ? 'Online · ${links.first.name}' : 'Offline — saved on the phone',
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
-                        ),
+                      Pill(
+                        label: online ? 'Online · ${links.first.name}' : 'Offline — saved on the phone',
+                        icon: online ? Icons.wifi : Icons.cloud_off_outlined,
+                        bg: online ? sync.synced : sync.pending,
+                        fg: online ? sync.onSynced : sync.onPending,
                       ),
                       const SizedBox(width: 8),
                       Text(ref.watch(authStateProvider).value?.email ?? '',
@@ -131,4 +129,22 @@ class MapScreen extends ConsumerWidget {
     await HapticFeedback.mediumImpact();
     if (context.mounted) context.push('/entrances/$id/survey');
   }
+}
+
+/// A pin: the status's icon on its tint, ringed, so it reads on the map's
+/// light tiles in both themes and without colour.
+class _Pin extends StatelessWidget {
+  const _Pin({required this.look});
+
+  final ({String label, IconData icon, Color bg, Color fg}) look;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: look.bg,
+          shape: BoxShape.circle,
+          border: Border.all(color: look.fg, width: 2),
+        ),
+        child: Center(child: Icon(look.icon, size: 22, color: look.fg)),
+      );
 }

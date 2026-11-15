@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'push.dart';
 import 'supabase_repositories.dart';
 
 /// The signed-in user, or null. supabase_flutter keeps the session itself
@@ -29,4 +30,9 @@ Future<void> signUp(String email, String password) async {
 Future<void> signIn(String email, String password) =>
     supabase.auth.signInWithPassword(email: email, password: password);
 
-Future<void> signOut() => supabase.auth.signOut();
+/// Step 5: this phone's push address leaves with the worker, while the
+/// session can still delete it (RLS: own rows only).
+Future<void> signOut() async {
+  await forgetThisPhone();
+  await supabase.auth.signOut();
+}

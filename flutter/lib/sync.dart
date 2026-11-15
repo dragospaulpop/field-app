@@ -3,14 +3,17 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show PostgrestException, PostgresChangeEvent, RealtimeChannel, RealtimeSubscribeStatus;
 
 import 'auth.dart';
 import 'photo_queue.dart';
 import 'contract/contract.dart';
 import 'db/database.dart' show QueueState;
 import 'providers.dart';
+import 'push.dart';
 import 'repositories.dart';
+import 'supabase_repositories.dart';
 
 /// Server state: my pins as the cloud has them, from the last fetch. The
 /// banner watches it; SyncScope copies every new list into SQLite.
@@ -23,8 +26,27 @@ final outboxProvider = StreamProvider(
   (ref) => ref.watch(databaseProvider).watchOutbox(),
 );
 
-/// The pull, again: on start, back in the foreground and on "Sync now".
+/// The pull, again: on start, back in the foreground, on "Sync now" and,
+/// since step 3, whenever the office changes one of my entrances.
 void pullPins(WidgetRef ref) => ref.invalidate(myPinsProvider);
+
+/// Step 3: Postgres Changes on entrances. RLS still decides: the phone hears
+/// only about rows its select policy shows it (its own entrances). Any event
+/// is a knock on the door: run the pull, never write the event's row (the
+/// pull is the one path into SQLite, with its rules for pending surveys).
+RealtimeChannel listenToEntrances(void Function() pull) => supabase
+    .channel('entrances')
+    .onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'entrances',
+      callback: (_) => pull(),
+    )
+    .subscribe((status, error) {
+      // (Re)joined: anything missed while away arrives with one pull.
+      if (status == RealtimeSubscribeStatus.subscribed) pull();
+      if (error != null) debugPrint('entrances channel $status: $error');
+    });
 
 /// Sign out only when nothing waits to be sent. The local database is not
 /// per user: the next worker's push would send this one's surveys, the server
@@ -36,11 +58,20 @@ Future<void> signOutIfSent(BuildContext context, WidgetRef ref) async {
   // Step 4: the photo queue too (every row not synced yet).
   final queue = (await ref.read(databaseProvider).watchQueue().first).counts;
   final photos = queue.entries.where((q) => q.key != QueueState.synced).fold(0, (n, q) => n + q.value);
-  if (waiting == 0 && photos == 0) return signOut();
+  var why = '$waiting survey(s) and $photos photo(s) not sent yet: tap Sync now (or Retry photos), then sign out.';
+  if (waiting == 0 && photos == 0) {
+    try {
+      return await signOut();
+    } catch (e) {
+      // Step 5: this phone's push row could not be deleted: stay signed in.
+      debugPrint('sign-out stopped: $e');
+      // The map banner's test: "with a connection" only when there is none.
+      final offline = (await Connectivity().checkConnectivity()).contains(ConnectivityResult.none);
+      why = 'Not signed out: this phone would keep receiving your pushes. Try again${offline ? ' with a connection' : ''}.';
+    }
+  }
   if (!context.mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-    content: Text('$waiting survey(s) and $photos photo(s) not sent yet: tap Sync now (or Retry photos), then sign out.'),
-  ));
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(why)));
 }
 
 var _pushing = false;
@@ -116,6 +147,13 @@ class _SyncScopeState extends ConsumerState<SyncScope> {
   late final AppLifecycleListener _lifecycle;
   late final StreamSubscription<List<ConnectivityResult>> _network;
   late final PhotoQueue _queue = ref.read(photoQueueProvider);
+  RealtimeChannel? _entrances;
+
+  /// Step 3: (re)join the entrances channel; one at a time.
+  void _listen() {
+    if (_entrances case final old?) supabase.removeChannel(old);
+    _entrances = listenToEntrances(() => pullPins(ref));
+  }
 
   @override
   void initState() {
@@ -124,15 +162,27 @@ class _SyncScopeState extends ConsumerState<SyncScope> {
     // fetch), back in the foreground, and when the network comes back. (And on
     // "Sync now"; the push also after a submit.)
     pushSurveys(ref);
+    // Step 5: signed in, so this phone may receive the office's pushes.
+    registerThisPhone();
     // The photo queue resumes: rows cut off mid-upload go back to pending,
     // photos from before the queue join it, then the worker starts.
     final db = ref.read(databaseProvider);
     db.resumeUploading().then((_) => enqueueLeftovers(db, ref.read(uidProvider))).then((_) => _queue.drain());
-    _lifecycle = AppLifecycleListener(onResume: () {
-      pushSurveys(ref);
-      pullPins(ref);
-      _queue.drain();
-    });
+    _listen();
+    _lifecycle = AppLifecycleListener(
+      // In the background the socket is the OS's to kill: leave, and join
+      // again (with a pull) when the worker comes back.
+      onPause: () {
+        if (_entrances case final c?) supabase.removeChannel(c);
+        _entrances = null;
+      },
+      onResume: () {
+        pushSurveys(ref);
+        pullPins(ref);
+        _queue.drain();
+        _listen();
+      },
+    );
     _network = Connectivity().onConnectivityChanged.listen((links) {
       if (links.contains(ConnectivityResult.none)) return;
       pushSurveys(ref);
@@ -155,6 +205,7 @@ class _SyncScopeState extends ConsumerState<SyncScope> {
     _lifecycle.dispose();
     _network.cancel();
     _queue.stop(); // signed out: no wake-up until someone signs in again
+    if (_entrances case final c?) supabase.removeChannel(c); // never another worker's channel
     super.dispose();
   }
 

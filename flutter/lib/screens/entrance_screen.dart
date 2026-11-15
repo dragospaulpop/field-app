@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../notifications.dart';
 import '../providers.dart';
 import 'here_card.dart';
 import 'photos_card.dart';
@@ -43,7 +44,10 @@ class EntranceScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('${e.street} ${e.number}', style: text.headlineSmall),
+          Semantics(
+            identifier: 'entrance-address', // step 6: what the Maestro flow checks
+            child: Text('${e.street} ${e.number}', style: text.headlineSmall),
+          ),
           Text(e.entranceName),
           Align(
             alignment: Alignment.centerLeft,
@@ -67,9 +71,18 @@ class EntranceScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           FilledButton(
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
             onPressed: () => context.push('/entrances/${e.id}/survey'),
             child: const Text('Survey'),
+          ),
+          const SizedBox(height: 8),
+          // Step 4: a local notification in a minute; its tap comes back here.
+          OutlinedButton.icon(
+            icon: const Icon(Icons.alarm),
+            label: const Text('Remind me in 1 minute'),
+            onPressed: () async {
+              final said = await remindInAMinute(e);
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(said)));
+            },
           ),
           const SizedBox(height: 8),
           const HereCard(),

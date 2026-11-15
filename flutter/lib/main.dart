@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,12 +6,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth.dart';
 import 'db/database.dart';
+import 'firebase_options.dart';
+import 'notifications.dart';
+import 'push.dart';
 import 'providers.dart';
 import 'session.dart';
+import 'theme/app_theme.dart';
 
 import 'screens/building_screen.dart';
 import 'screens/entrance_screen.dart';
 import 'screens/inbox_screen.dart';
+import 'screens/long_list_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/route_screen.dart';
 import 'screens/sign_in_screen.dart';
@@ -35,6 +41,11 @@ Future<void> main() async {
   final db = AppDatabase();
   await db.seedIfEmpty(fixtures.buildings);
   _startAt = await lastTab(); // reopen on the tab the app was closed on
+  // Step 4: a tap on a notification opens its entrance, while the app runs
+  // (the callback) and when the tap started the app (the returned route).
+  final launchedFor = await initNotifications((route) => _router.push(route));
+  // Step 5: pushes from the office; a tap routes through the same function.
+  final pushedFor = await initPush(() => DefaultFirebaseOptions.currentPlatform, (route) => _router.push(route));
   runApp(ProviderScope(
     // Hand the two things main() opened to every provider that asks for them.
     overrides: [
@@ -43,10 +54,13 @@ Future<void> main() async {
     ],
     child: const FieldApp(),
   ));
+  // Opened by TabsShell, once the router is on screen (see there).
+  _openOnStart = launchedFor ?? pushedFor;
 }
 
 const _tabs = ['/map', '/route', '/inbox'];
 var _startAt = _tabs.first;
+String? _openOnStart; // the route of the notification that started the app
 
 // A top-level final is created on first use (in FieldApp), after main() has
 // read _startAt.
@@ -79,6 +93,8 @@ final _router = GoRouter(
       ],
     ),
     // Outside the shell: these cover the tab bar, like a stack screen.
+    // Step 7: the list to measure; never in a release build.
+    if (!kReleaseMode) GoRoute(path: '/dev/long-list', builder: (context, state) => const LongListScreen()),
     GoRoute(
       path: '/buildings/:id',
       builder: (context, state) => BuildingScreen(id: state.pathParameters['id']!),
@@ -98,9 +114,9 @@ final _router = GoRouter(
   ],
 );
 
-const _seed = Color(0xFFC2410C);
-final _light = ThemeData(colorSchemeSeed: _seed, brightness: Brightness.light);
-final _dark = ThemeData(colorSchemeSeed: _seed, brightness: Brightness.dark);
+// Step 2: the theme lives in theme/app_theme.dart, one ThemeData per brightness.
+final _light = buildTheme(Brightness.light);
+final _dark = buildTheme(Brightness.dark);
 
 /// The auth-state gate: no user, no app. Signing in or out rebuilds this.
 class FieldApp extends ConsumerWidget {
@@ -139,6 +155,13 @@ class TabsShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // The notification that started the app opens its entrance on top of the
+    // tabs. Not in main(): a push before the router has read its first
+    // location leaves the entrance alone on the stack, and Back closes the app.
+    if (_openOnStart case final route?) {
+      _openOnStart = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _router.push(route));
+    }
     final f = ref.watch(fixturesProvider);
     final unread = f.messages
         .where((m) => m.authorId != f.me && !m.readAt.containsKey(f.me))

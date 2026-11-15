@@ -50,3 +50,8 @@ app.*.map.json
 # Your Supabase project's URL and publishable key (lab 5, step 1): never committed.
 # Copy supabase.example.json to supabase.json and fill it in.
 /supabase.json
+
+# Your Firebase project's config (week 6, step 5): written by flutterfire configure, never committed
+/lib/firebase_options.dart
+/android/app/google-services.json
+/firebase.json

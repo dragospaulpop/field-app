@@ -1,0 +1,25 @@
+# Week 6, step 6: one end-to-end flow on the emulator. The app must be installed
+# (a debug or release build); the worker must have an entrance on Calea Victoriei 112.
+# maestro test -e EMAIL=<email> -e PASSWORD=<password> .maestro/open-assigned-entrance.yaml
+appId: ro.rau.field_app
+---
+- launchApp:
+    clearState: true # signed out, empty SQLite: every run starts the same
+- tapOn:
+    id: "email"
+- inputText: ${EMAIL}
+- tapOn:
+    id: "password"
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: "sign-in"
+# The pull fills SQLite, the pins appear: wait for one by its label.
+- extendedWaitUntil:
+    visible: "Calea Victoriei 112, Sc. .*"
+    timeout: 30000
+- tapOn: "Calea Victoriei 112, Sc. .*"
+- assertVisible:
+    id: "entrance-address"
+- assertVisible: "Calea Victoriei 112"
+- assertVisible: "Remind me in 1 minute"

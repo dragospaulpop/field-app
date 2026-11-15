@@ -37,7 +37,6 @@ class _HereCardState extends ConsumerState<HereCard> {
             Text('GPS: $quality'),
             const SizedBox(height: 8),
             OutlinedButton(
-              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
               onPressed: _busy
                   ? null
                   : () async {

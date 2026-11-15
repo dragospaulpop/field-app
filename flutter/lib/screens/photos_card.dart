@@ -46,7 +46,6 @@ class _PhotosCardState extends ConsumerState<PhotosCard> {
             Row(children: [
               Expanded(
                 child: FilledButton(
-                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
                   onPressed: _busy ? null : () => _run(() => takePhoto(context, ref, widget.entranceId)),
                   child: const Text('Take a photo'),
                 ),
@@ -54,7 +53,6 @@ class _PhotosCardState extends ConsumerState<PhotosCard> {
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
                   onPressed: _busy ? null : () => _run(() => pickPhoto(ref, widget.entranceId)),
                   child: const Text('From the gallery'),
                 ),
