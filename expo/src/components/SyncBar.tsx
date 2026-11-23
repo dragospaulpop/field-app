@@ -2,7 +2,7 @@ import { skipToken, useQuery } from '@tanstack/react-query';
 import { Pressable, Text, View } from 'react-native';
 import { currentUser } from '../auth';
 import type { Entrance } from '../contract/contract';
-import { useQueue } from '../photoQueue';
+import { drainQueue, useQueue } from '../photoQueue';
 import { retryFailed, useOutbox } from '../store';
 import { myPinsKey, pushSurveys } from '../sync';
 
@@ -26,7 +26,13 @@ export function SyncBar() {
       <Text className="text-xs text-muted">
         {box.pending} to send · {box.failed} refused · {box.lost} ignored
       </Text>
-      <Pressable accessibilityRole="button" onPress={() => pushSurveys(uid)}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => {
+          pushSurveys(uid);
+          drainQueue();
+        }}
+      >
         <Text className="text-xs font-semibold text-primary">Sync now</Text>
       </Pressable>
       {box.failed > 0 && (
